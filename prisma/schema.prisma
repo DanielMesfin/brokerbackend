@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  passwordHash   String
+  displayName    String?
+  role           String          @default("USER")
+  isActive       Boolean         @default(true)
+  lastLogin      DateTime?
+  refreshToken   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  comments       Comment[]
+  likes          Like[]
+  posts          Post[]
+  listings       Listing[]
+  profile        UserProfile?
+  businesses     BusinessMember[]
+  sentConnections     Connection[]    @relation("SentConnections")
+  receivedConnections Connection[]    @relation("ReceivedConnections")
+}
+
+model UserProfile {
+  id          String      @id @default(uuid())
+  userId      String      @unique
+  bio         String?
+  avatar      String?
+  website     String?
+  location    String?
+  dateOfBirth DateTime?
+  isVerified  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id])
+  socialLinks SocialLink? @relation(fields: [socialLinksId], references: [id])
+  socialLinksId String?   @unique
+}
+
+model SocialLink {
+  id             String      @id @default(uuid())
+  facebookUrl    String?
+  instagramUrl   String?
+  tiktokUrl      String?
+  youtubeUrl     String?
+  linkedinUrl    String?
+  twitterUrl     String?
+  telegramUrl    String?
+  whatsappNumber String?
+  websiteUrl     String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  userProfile    UserProfile?
+}
+
+model Post {
+  id          String    @id @default(uuid())
+  content     String
+  media       String    @default("[]")
+  authorId    String
+  isPublished Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  comments    Comment[]
+  likes       Like[]
+  author      User      @relation(fields: [authorId], references: [id])
+
+  @@index([authorId])
+}
+model Business {
+  id              String            @id @default(uuid())
+  name            String
+  description     String?
+  logo            String?
+  website         String?
+  industry        String?
+  size            String?           // e.g., '1-10', '11-50', '51-200', '201-500', '500+'
+  isVerified      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  members         BusinessMember[]
+  listings        Listing[]
+  
+  @@index([name])
+  @@index([industry])
+}
+
+model BusinessMember {
+  id          String      @id @default(uuid())
+  userId      String
+  businessId  String
+  role        String        @default("MEMBER")
+  joinedAt    DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id])
+  business    Business    @relation(fields: [businessId], references: [id])
+  
+  @@unique([userId, businessId])
+  @@index([businessId])
+}
+
+model Connection {
+  id              String          @id @default(uuid())
+  senderId        String
+  receiverId      String
+  status          String            @default("PENDING")
+  message         String?
+  connectedAt     DateTime?
+  sender          User            @relation("SentConnections", fields: [senderId], references: [id])
+  receiver        User            @relation("ReceivedConnections", fields: [receiverId], references: [id])
+  
+  @@unique([senderId, receiverId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Listing {
+  id             String    @id @default(uuid())
+  title          String
+  description    String
+  type           String    // 'C2C', 'B2B', 'B2C', 'B2G'
+  price          Float
+  category       String
+  tags           String    // Stored as JSON string
+  commissionRate Float?
+  isNegotiable   Boolean   @default(false)
+  imageUrls      String?   // Stored as JSON string
+  userId         String?   // Nullable for business listings
+  businessId     String?   // If listing is posted by a business
+  isActive       Boolean   @default(true)
+  views          Int       @default(0)
+  status         String    @default("PENDING") // 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'SOLD', 'EXPIRED'
+  quantity       Int       @default(1)
+  minOrder       Int       @default(1)
+  maxOrder       Int?
+  leadTime       String?   // e.g., '1-2 weeks', '3-5 days'
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User?     @relation(fields: [userId], references: [id])
+  business       Business? @relation(fields: [businessId], references: [id])
+  
+  @@index([userId])
+  @@index([businessId])
+  @@index([status])
+  @@index([type])
+  @@index([category])
+}
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  postId    String
+  authorId  String
+  parentId  String?
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Customer {
+  id              String    @id @default(uuid())
+  companyName     String
+  contactPerson   String
+  email           String    @unique
+  phone           String?
+  billingAddress  String?
+  shippingAddress String?
+  taxId           String?
+  paymentTerms    Int?      @default(30)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([email])
+  @@index([companyName])
+}
