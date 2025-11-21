@@ -15,7 +15,8 @@ export class AuthService {
 
   async register(email: string, password: string, displayName?: string) {
     if (!email || !password) {
-      throw new UnauthorizedException('Email and password are required');
+      const { BadRequestException } = await import('@nestjs/common');
+      throw new BadRequestException('Email and password are required');
     }
     
     const existing = await this.prisma.user.findUnique({ 
@@ -23,7 +24,8 @@ export class AuthService {
     });
     
     if (existing) {
-      throw new UnauthorizedException('Email already in use');
+      const { ConflictException } = await import('@nestjs/common');
+      throw new ConflictException('Email already in use');
     }
     
     const hash = await bcrypt.hash(password, 10);

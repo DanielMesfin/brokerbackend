@@ -21,13 +21,15 @@ let AuthService = class AuthService {
     }
     async register(email, password, displayName) {
         if (!email || !password) {
-            throw new common_1.UnauthorizedException('Email and password are required');
+            const { BadRequestException } = await Promise.resolve().then(() => require('@nestjs/common'));
+            throw new BadRequestException('Email and password are required');
         }
         const existing = await this.prisma.user.findUnique({
             where: { email: email }
         });
         if (existing) {
-            throw new common_1.UnauthorizedException('Email already in use');
+            const { ConflictException } = await Promise.resolve().then(() => require('@nestjs/common'));
+            throw new ConflictException('Email already in use');
         }
         const hash = await bcrypt.hash(password, 10);
         const user = await this.prisma.user.create({
