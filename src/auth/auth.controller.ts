@@ -1,35 +1,67 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UnauthorizedException, Inject } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiHeader, ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, MaxLength, Matches, IsIn } from 'class-validator';
+
+export const USER_ROLES = ['USER', 'ADMIN', 'MODERATOR'] as const;
+export type UserRole = typeof USER_ROLES[number];
 
 class RegisterDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
-  @IsNotEmpty()
+  @ApiProperty({ 
+    example: 'user@example.com',
+    description: 'User\'s email address. Must be unique across the platform.',
+    required: true,
+    format: 'email'
+  })
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
-  @ApiProperty({ example: 'securePassword123!' })
-  @IsString()
-  @MinLength(6)
-  @IsNotEmpty()
+  @ApiProperty({
+    example: 'securePassword123!',
+    description: 'User password. Must be at least 6 characters long.',
+    required: true,
+    minLength: 6,
+    format: 'password'
+  })
+  @IsString({ message: 'Password must be a string' })
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsNotEmpty({ message: 'Password is required' })
   password: string;
 
-  @ApiProperty({ example: 'John', required: false })
-  @IsOptional()
-  @IsString()
-  firstName?: string;
+  @ApiProperty({
+    example: 'John',
+    description: 'User\'s first name',
+    required: true,
+    maxLength: 50
+  })
+  @IsString({ message: 'First name must be a string' })
+  @IsNotEmpty({ message: 'First name is required' })
+  @MaxLength(50, { message: 'First name cannot be longer than 50 characters' })
+  firstName: string;
 
-  @ApiProperty({ example: 'Doe', required: false })
-  @IsOptional()
-  @IsString()
-  secondName?: string;
+  @ApiProperty({
+    example: 'Doe',
+    description: 'User\'s last name',
+    required: true,
+    maxLength: 50
+  })
+  @IsString({ message: 'Last name must be a string' })
+  @IsNotEmpty({ message: 'Last name is required' })
+  @MaxLength(50, { message: 'Last name cannot be longer than 50 characters' })
+  lastName: string;
 
-  @ApiProperty({ example: '+251900000000', required: false })
+  @ApiProperty({
+    example: 'USER',
+    description: 'User role (USER, ADMIN, or MODERATOR)',
+    enum: USER_ROLES,
+    default: 'USER'
+  })
   @IsOptional()
-  @IsString()
-  phone?: string;
+  @IsString({ message: 'Role must be a string' })
+  @IsIn(USER_ROLES, { message: 'Invalid user role. Must be one of: ' + USER_ROLES.join(', ') })
+  role?: UserRole;
 }
 
 class LoginDto {
@@ -50,48 +82,117 @@ class AuthResponse {
   user: {
     id: string;
     email: string;
-    firstName?: string | null;
-    secondName?: string | null;
-    phone?: string | null;
+    firstName: string;
+    lastName: string; // This will be mapped from secondName in the service
+    role: string;
   };
 }
 
 class UserResponse {
   id: string;
   email: string;
-  firstName?: string | null;
-  secondName?: string | null;
-  phone?: string | null;
+  firstName: string;
+  lastName: string; // This will be mapped from secondName in the service
+  role: string;
 }
 
 @ApiTags('Authentication')
 @Controller('api/auth')
 export class AuthController {
-  constructor(private auth: AuthService, private jwtService: JwtService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService
+  ) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User successfully registered', type: UserResponse })
-  @ApiResponse({ status: 400, description: 'Bad Request - Invalid input' })
-  @ApiResponse({ status: 409, description: 'Conflict - Email already exists' })
-  @ApiBody({ 
-    type: RegisterDto,
-    examples: {
-      user: {
-        summary: 'User Registration',
-        value: {
-          email: 'user@example.com',
-          password: 'securePassword123!',
-          firstName: 'John',
-          secondName: 'Doe',
-          phone: '+251900000000'
+  @ApiOperation({ 
+    summary: 'Register a new user',
+    description: 'Registers a new user with the provided details. Email must be unique across the platform.'
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'User successfully registered', 
+    type: UserResponse,
+    headers: {
+      'Set-Cookie': {
+        description: 'Sets an HTTP-only cookie with the authentication token',
+        schema: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad Request - Invalid input data',
+    content: {
+      'application/json': {
+        example: {
+          statusCode: 400,
+          message: [
+            'email must be an email',
+            'password must be longer than or equal to 6 characters'
+          ],
+          error: 'Bad Request'
         }
       }
     }
   })
+  @ApiResponse({ 
+    status: 409, 
+    description: 'Conflict - Email already exists',
+    content: {
+      'application/json': {
+        example: {
+          statusCode: 409,
+          message: 'Email already in use',
+          error: 'Conflict'
+        }
+      }
+    }
+  })
+  @ApiBody({ 
+    type: RegisterDto,
+    description: 'User registration details',
+    required: true,
+    examples: {
+      minimal: {
+        summary: 'Minimal registration',
+        description: 'Email, password, first name and last name are required',
+        value: {
+          email: 'user@example.com',
+          password: 'securePassword123!',
+          firstName: 'John',
+          lastName: 'Doe'
+        }
+      },
+      full: {
+        summary: 'Full registration',
+        description: 'Register with all fields',
+        value: {
+          email: 'user@example.com',
+          password: 'securePassword123!',
+          firstName: 'John',
+          lastName: 'Doe',
+          role: 'USER'
+        }
+      }
+    }
+  })
+  @HttpCode(HttpStatus.CREATED)
   async register(@Body() body: RegisterDto): Promise<UserResponse> {
-    const user = await this.auth.register(body.email, body.password, body.firstName, body.secondName, body.phone);
-    return { id: user.id, email: user.email, firstName: user.firstName ?? null, secondName: user.secondName ?? null, phone: user.phone ?? null };
+    const user = await this.authService.register(
+      body.email, 
+      body.password, 
+      body.firstName, 
+      body.lastName, // This will be mapped to secondName in the service
+      body.role
+    );
+    return { 
+      id: user.id, 
+      email: user.email, 
+      firstName: user.firstName || '',
+      lastName: user.secondName || '', // Map secondName back to lastName for the response
+      role: user.role 
+    };
   }
 
   @HttpCode(HttpStatus.OK)

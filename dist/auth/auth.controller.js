@@ -12,45 +12,75 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthController = void 0;
+exports.AuthController = exports.USER_ROLES = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const jwt_1 = require("@nestjs/jwt");
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
+exports.USER_ROLES = ['USER', 'ADMIN', 'MODERATOR'];
 class RegisterDto {
 }
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'user@example.com' }),
-    (0, class_validator_1.IsEmail)(),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, swagger_1.ApiProperty)({
+        example: 'user@example.com',
+        description: 'User\'s email address. Must be unique across the platform.',
+        required: true,
+        format: 'email'
+    }),
+    (0, class_validator_1.IsEmail)({}, { message: 'Please provide a valid email address' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Email is required' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'securePassword123!' }),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(6),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, swagger_1.ApiProperty)({
+        example: 'securePassword123!',
+        description: 'User password. Must be at least 6 characters long.',
+        required: true,
+        minLength: 6,
+        format: 'password'
+    }),
+    (0, class_validator_1.IsString)({ message: 'Password must be a string' }),
+    (0, class_validator_1.MinLength)(6, { message: 'Password must be at least 6 characters long' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Password is required' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'John', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        example: 'John',
+        description: 'User\'s first name',
+        required: true,
+        maxLength: 50
+    }),
+    (0, class_validator_1.IsString)({ message: 'First name must be a string' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'First name is required' }),
+    (0, class_validator_1.MaxLength)(50, { message: 'First name cannot be longer than 50 characters' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "firstName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'Doe', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        example: 'Doe',
+        description: 'User\'s last name',
+        required: true,
+        maxLength: 50
+    }),
+    (0, class_validator_1.IsString)({ message: 'Last name must be a string' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Last name is required' }),
+    (0, class_validator_1.MaxLength)(50, { message: 'Last name cannot be longer than 50 characters' }),
     __metadata("design:type", String)
-], RegisterDto.prototype, "secondName", void 0);
+], RegisterDto.prototype, "lastName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '+251900000000', required: false }),
+    (0, swagger_1.ApiProperty)({
+        example: 'USER',
+        description: 'User role (USER, ADMIN, or MODERATOR)',
+        enum: exports.USER_ROLES,
+        default: 'USER'
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsString)({ message: 'Role must be a string' }),
+    (0, class_validator_1.IsIn)(exports.USER_ROLES, { message: 'Invalid user role. Must be one of: ' + exports.USER_ROLES.join(', ') }),
     __metadata("design:type", String)
-], RegisterDto.prototype, "phone", void 0);
+], RegisterDto.prototype, "role", void 0);
 class LoginDto {
 }
 __decorate([
@@ -76,9 +106,14 @@ let AuthController = class AuthController {
         this.jwtService = jwtService;
     }
     async register(body) {
-        var _a, _b, _c;
-        const user = await this.auth.register(body.email, body.password, body.firstName, body.secondName, body.phone);
-        return { id: user.id, email: user.email, firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null, secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null, phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null };
+        const user = await this.auth.register(body.email, body.password, body.firstName, body.lastName, body.role);
+        return {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName || '',
+            lastName: user.secondName || '',
+            role: user.role
+        };
     }
     async login(body) {
         const user = await this.auth.validateUser(body.email, body.password);
@@ -105,21 +140,74 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
-    (0, swagger_1.ApiOperation)({ summary: 'Register a new user' }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'User successfully registered', type: UserResponse }),
-    (0, swagger_1.ApiResponse)({ status: 400, description: 'Bad Request - Invalid input' }),
-    (0, swagger_1.ApiResponse)({ status: 409, description: 'Conflict - Email already exists' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Register a new user',
+        description: 'Registers a new user with the provided details. Email must be unique across the platform.'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'User successfully registered',
+        type: UserResponse,
+        headers: {
+            'Set-Cookie': {
+                description: 'Sets an HTTP-only cookie with the authentication token',
+                schema: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: 'Bad Request - Invalid input data',
+        content: {
+            'application/json': {
+                example: {
+                    statusCode: 400,
+                    message: [
+                        'email must be an email',
+                        'password must be longer than or equal to 6 characters'
+                    ],
+                    error: 'Bad Request'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 409,
+        description: 'Conflict - Email already exists',
+        content: {
+            'application/json': {
+                example: {
+                    statusCode: 409,
+                    message: 'Email already in use',
+                    error: 'Conflict'
+                }
+            }
+        }
+    }),
     (0, swagger_1.ApiBody)({
         type: RegisterDto,
+        description: 'User registration details',
+        required: true,
         examples: {
-            user: {
-                summary: 'User Registration',
+            minimal: {
+                summary: 'Minimal registration',
+                description: 'Email, password, first name and last name are required',
                 value: {
                     email: 'user@example.com',
                     password: 'securePassword123!',
                     firstName: 'John',
-                    secondName: 'Doe',
-                    phone: '+251900000000'
+                    lastName: 'Doe'
+                }
+            },
+            full: {
+                summary: 'Full registration',
+                description: 'Register with all fields',
+                value: {
+                    email: 'user@example.com',
+                    password: 'securePassword123!',
+                    firstName: 'John',
+                    lastName: 'Doe',
+                    role: 'USER'
                 }
             }
         }
@@ -172,6 +260,8 @@ __decorate([
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('api/auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService, jwt_1.JwtService])
+    __param(0, (0, common_1.Inject)('AUTH_SERVICE')),
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        jwt_1.JwtService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

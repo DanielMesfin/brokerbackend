@@ -11,13 +11,18 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Module({
   imports: [
     PrismaModule,
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dev-secret',
       signOptions: { expiresIn: '7d' }
     })
   ],
-  providers: [AuthService, JwtStrategy, JwtPrismaGuard, JwtAuthGuard],
+  providers: [
+    AuthService,
+    JwtStrategy, 
+    JwtPrismaGuard, 
+    JwtAuthGuard
+  ],
   controllers: [AuthController],
   exports: [AuthService, JwtAuthGuard]
 })

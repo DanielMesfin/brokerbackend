@@ -14,51 +14,59 @@ const common_1 = require("@nestjs/common");
 const bcrypt = require("bcrypt");
 const jwt_1 = require("@nestjs/jwt");
 const prisma_service_1 = require("../prisma/prisma.service");
+const auth_controller_1 = require("./auth.controller");
 let AuthService = class AuthService {
     constructor(prisma, jwtService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
     }
-    async register(email, password, firstName, secondName, phone) {
-        var _a, _b, _c;
-        if (!email || !password) {
+    async register(email, password, firstName, lastName, role = 'USER') {
+        if (!email || !password || !firstName || !lastName) {
             const { BadRequestException } = await Promise.resolve().then(() => require('@nestjs/common'));
-            throw new BadRequestException('Email and password are required');
+            throw new BadRequestException('Email, password, first name, and last name are required');
         }
         const existing = await this.prisma.user.findUnique({
-            where: { email: email }
+            where: { email }
         });
         if (existing) {
             const { ConflictException } = await Promise.resolve().then(() => require('@nestjs/common'));
             throw new ConflictException('Email already in use');
         }
+        if (!auth_controller_1.USER_ROLES.includes(role)) {
+            const { BadRequestException } = await Promise.resolve().then(() => require('@nestjs/common'));
+            throw new BadRequestException(`Invalid role. Must be one of: ${auth_controller_1.USER_ROLES.join(', ')}`);
+        }
         const hash = await bcrypt.hash(password, 10);
         const user = await this.prisma.user.create({
             data: {
-                email: email,
+                email,
                 passwordHash: hash,
-                firstName: firstName || null,
-                secondName: secondName || null,
-                phone: phone || null,
-                role: 'USER',
+                firstName,
+                secondName: lastName,
+                role,
                 isActive: true
-            }
+            },
         });
         return {
             id: user.id,
             email: user.email,
-            firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null,
-            secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null,
-            phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null,
+            firstName: user.firstName || '',
+            secondName: user.secondName,
+            phone: user.phone,
+            role: user.role,
+            isActive: user.isActive,
+            lastLogin: user.lastLogin,
+            refreshToken: user.refreshToken,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
         };
     }
     async validateUser(email, password) {
-        var _a, _b, _c;
         if (!email) {
             return null;
         }
         const user = await this.prisma.user.findUnique({
-            where: { email: email }
+            where: { email }
         });
         if (!user) {
             return null;
@@ -74,9 +82,15 @@ let AuthService = class AuthService {
         return {
             id: user.id,
             email: user.email,
-            firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null,
-            secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null,
-            phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null,
+            firstName: user.firstName || '',
+            secondName: user.secondName,
+            phone: user.phone,
+            role: user.role,
+            isActive: user.isActive,
+            lastLogin: user.lastLogin,
+            refreshToken: user.refreshToken,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
         };
     }
     async getPublicUserById(id) {
