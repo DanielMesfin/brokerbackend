@@ -100,6 +100,7 @@ class UserResponse {
 @Controller('api/auth')
 export class AuthController {
   constructor(
+    @Inject('AUTH_SERVICE')
     private readonly authService: AuthService,
     private readonly jwtService: JwtService
   ) {}
@@ -213,11 +214,11 @@ export class AuthController {
     }
   })
   async login(@Body() body: LoginDto) {
-    const user = await this.auth.validateUser(body.email, body.password);
+    const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.auth.login(user);
+    return this.authService.login(user);
   }
 
   @Get('me')
@@ -239,7 +240,7 @@ export class AuthController {
     const token = auth.replace(/^Bearer\s+/i, '');
     try {
       const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'dev-secret' });
-      const user = await this.auth.getPublicUserById(payload.sub);
+      const user = await this.authService.getPublicUserById(payload.sub);
       return { user };
     } catch (e) {
       throw new UnauthorizedException('Invalid token');

@@ -8,11 +8,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
+const prisma_module_1 = require("./prisma/prisma.module");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
 const posts_module_1 = require("./posts/posts.module");
-const prisma_module_1 = require("./prisma/prisma.module");
-const config_1 = require("@nestjs/config");
 const marketing_sales_module_1 = require("./marketing-sales/marketing-sales.module");
 const erp_crm_module_1 = require("./erp-crm/erp-crm.module");
 const social_links_module_1 = require("./social-links/social-links.module");
@@ -23,11 +23,14 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true }),
-            auth_module_1.AuthModule,
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: '.env',
+            }),
+            prisma_module_1.PrismaModule,
+            (0, common_1.forwardRef)(() => auth_module_1.AuthModule),
             users_module_1.UsersModule,
             posts_module_1.PostsModule,
-            prisma_module_1.PrismaModule,
             marketing_sales_module_1.MarketingSalesModule,
             erp_crm_module_1.ErpCrmModule,
             social_links_module_1.SocialLinksModule,

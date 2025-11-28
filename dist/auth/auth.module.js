@@ -22,24 +22,27 @@ exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            prisma_module_1.PrismaModule,
+            (0, common_1.forwardRef)(() => prisma_module_1.PrismaModule),
             passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'dev-secret',
-                signOptions: { expiresIn: '7d' }
-            })
+            jwt_1.JwtModule.registerAsync({
+                useFactory: () => ({
+                    secret: process.env.JWT_SECRET || 'dev-secret',
+                    signOptions: { expiresIn: '7d' },
+                }),
+            }),
         ],
         providers: [
             {
                 provide: 'AUTH_SERVICE',
                 useClass: auth_service_1.AuthService,
             },
+            auth_service_1.AuthService,
             jwt_strategy_1.JwtStrategy,
             auth_guard_1.JwtPrismaGuard,
             jwt_auth_guard_1.JwtAuthGuard
         ],
         controllers: [auth_controller_1.AuthController],
-        exports: [auth_service_1.AuthService, jwt_auth_guard_1.JwtAuthGuard]
+        exports: ['AUTH_SERVICE', jwt_auth_guard_1.JwtAuthGuard]
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

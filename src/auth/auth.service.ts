@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,7 +20,11 @@ type PrismaUser = {
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(JwtService)
+    private readonly jwtService: JwtService
+  ) {}
 
   async register(email: string, password: string, firstName: string, lastName: string, role: UserRole = 'USER') {
     if (!email || !password || !firstName || !lastName) {

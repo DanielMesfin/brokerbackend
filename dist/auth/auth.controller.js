@@ -101,12 +101,12 @@ class AuthResponse {
 class UserResponse {
 }
 let AuthController = class AuthController {
-    constructor(auth, jwtService) {
-        this.auth = auth;
+    constructor(authService, jwtService) {
+        this.authService = authService;
         this.jwtService = jwtService;
     }
     async register(body) {
-        const user = await this.auth.register(body.email, body.password, body.firstName, body.lastName, body.role);
+        const user = await this.authService.register(body.email, body.password, body.firstName, body.lastName, body.role);
         return {
             id: user.id,
             email: user.email,
@@ -116,11 +116,11 @@ let AuthController = class AuthController {
         };
     }
     async login(body) {
-        const user = await this.auth.validateUser(body.email, body.password);
+        const user = await this.authService.validateUser(body.email, body.password);
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        return this.auth.login(user);
+        return this.authService.login(user);
     }
     async me(auth) {
         if (!auth) {
@@ -129,7 +129,7 @@ let AuthController = class AuthController {
         const token = auth.replace(/^Bearer\s+/i, '');
         try {
             const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'dev-secret' });
-            const user = await this.auth.getPublicUserById(payload.sub);
+            const user = await this.authService.getPublicUserById(payload.sub);
             return { user };
         }
         catch (e) {
@@ -212,6 +212,7 @@ __decorate([
             }
         }
     }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [RegisterDto]),
