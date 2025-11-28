@@ -6,7 +6,9 @@ import { Listing, ListingStatus } from './entities/listing.entity';
 type ListingWithRelations = Listing & {
   user: {
     id: string;
-    displayName: string | null;
+    firstName: string | null;
+    secondName: string | null;
+    phone: string | null;
     email: string;
   };
 };
@@ -37,7 +39,9 @@ export class MarketingSalesService {
         user: {
           select: {
             id: true,
-            displayName: true,
+            firstName: true,
+            secondName: true,
+            phone: true,
             email: true,
           },
         },
@@ -57,7 +61,9 @@ export class MarketingSalesService {
         user: {
           select: {
             id: true,
-            displayName: true,
+            firstName: true,
+            secondName: true,
+            phone: true,
             email: true,
           },
         },
@@ -100,7 +106,9 @@ export class MarketingSalesService {
         user: {
           select: {
             id: true,
-            displayName: true,
+            firstName: true,
+            secondName: true,
+            phone: true,
             email: true,
           },
         },
@@ -169,7 +177,9 @@ export class MarketingSalesService {
         user: {
           select: {
             id: true,
-            displayName: true,
+            firstName: true,
+            secondName: true,
+            phone: true,
             email: true,
           },
         },

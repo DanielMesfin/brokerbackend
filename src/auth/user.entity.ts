@@ -3,6 +3,8 @@ export type User = {
   id: string;
   email: string;
   passwordHash: string;
-  displayName?: string | null;
+  firstName?: string | null;
+  secondName?: string | null;
+  phone?: string | null;
   createdAt: string | Date;
 };

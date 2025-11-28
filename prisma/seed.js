@@ -7,6 +7,12 @@ async function main() {
   console.log('Seeding database...');
 
   // Clear existing data (use with caution)
+  // Clear existing data (use with caution)
+  await prisma.agentRun.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.draftOrder.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.knowledgeDoc.deleteMany();
   await prisma.like.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.post.deleteMany();
@@ -29,7 +35,9 @@ async function main() {
       data: { 
         email: 'admin@unitlab.et', 
         passwordHash: password, 
-        displayName: 'Abebe Admin',
+        firstName: 'Abebe',
+        secondName: 'Admin',
+        phone: '+251900000001',
         role: 'ADMIN',
         isActive: true,
         createdAt: now,
@@ -40,7 +48,9 @@ async function main() {
       data: { 
         email: 'influencer@ethio.et', 
         passwordHash: password, 
-        displayName: 'Lulit Influencer',
+        firstName: 'Lulit',
+        secondName: 'Influencer',
+        phone: '+251900000002',
         role: 'INFLUENCER',
         isActive: true,
         createdAt: now,
@@ -51,7 +61,9 @@ async function main() {
       data: { 
         email: 'brand@ethiotech.et', 
         passwordHash: password, 
-        displayName: 'EthioTech',
+        firstName: 'Ethio',
+        secondName: 'Tech',
+        phone: '+251900000003',
         role: 'BRAND',
         isActive: true,
         createdAt: now,
@@ -62,7 +74,9 @@ async function main() {
       data: { 
         email: 'user@habesha.et', 
         passwordHash: password, 
-        displayName: 'Kebede User',
+        firstName: 'Kebede',
+        secondName: 'User',
+        phone: '+251900000004',
         role: 'USER',
         isActive: true,
         createdAt: now,
@@ -118,6 +132,135 @@ async function main() {
       role: 'MEMBER'
     }
   });
+
+  // Create sample knowledge documents for RAG
+  const knowledgeDocs = [
+    {
+      title: 'Product Return Policy',
+      source: 'internal',
+      text: 'Customers can return products within 14 days of purchase. Items must be unused and in original packaging. Refunds will be processed within 5 business days.',
+    },
+    {
+      title: 'Shipping Information',
+      source: 'internal',
+      text: 'Standard shipping within Addis Ababa takes 2-3 business days. For regions outside Addis, delivery may take 5-7 business days. Express shipping is available at an additional cost.',
+    },
+    {
+      title: 'Payment Methods',
+      source: 'internal',
+      text: 'We accept cash on delivery, bank transfer, and mobile money (Telebirr, CBE Birr, and M-Pesa). For large orders, we require a 30% deposit.',
+    },
+    {
+      title: 'Wholesale Inquiries',
+      source: 'internal',
+      text: 'For wholesale orders, please contact our sales team at sales@unitlab.et or call +251 900 000 000. Minimum order quantity for wholesale is 10 units.',
+    },
+  ];
+
+  await Promise.all(knowledgeDocs.map(doc => 
+    prisma.knowledgeDoc.create({
+      data: {
+        title: doc.title,
+        source: doc.source,
+        text: doc.text,
+      },
+    })
+  ));
+
+  // Create sample listings
+  const listings = await Promise.all([
+    prisma.listing.create({
+      data: {
+        title: 'Ethiopian Coffee Beans - Yirgacheffe',
+        description: 'Premium grade 1 Yirgacheffe coffee beans, washed process. Grown in the highlands of Sidama, Addis Ababa.',
+        type: 'C2C',
+        category: 'Food & Beverage',
+        price: 1200,
+        tags: JSON.stringify(['coffee', 'yirgacheffe', 'premium', 'ethiopian']),
+        isNegotiable: true,
+        quantity: 50,
+        minOrder: 1,
+        maxOrder: 10,
+        status: 'APPROVED',
+        userId: users[1].id,
+      },
+    }),
+    prisma.listing.create({
+      data: {
+        title: 'Handwoven Ethiopian Scarf',
+        description: 'Authentic Ethiopian handwoven scarf made from pure cotton. Available in various colors. Made in Addis Ababa.',
+        type: 'B2C',
+        category: 'Fashion',
+        price: 850,
+        tags: JSON.stringify(['scarf', 'handmade', 'cotton', 'traditional']),
+        isNegotiable: false,
+        quantity: 20,
+        minOrder: 1,
+        status: 'APPROVED',
+        businessId: ethioAir.id,
+      },
+    }),
+  ]);
+
+  // Create sample conversations and messages
+  const conversation1 = await prisma.conversation.create({
+    data: {
+      listingId: listings[0].id,
+      buyerUserId: users[3].id,  // Regular user as buyer
+      sellerUserId: users[1].id, // Influencer as seller
+      status: 'OPEN',
+    },
+  });
+
+  const messages1 = [
+    { conversationId: conversation1.id, senderType: 'USER', text: 'Hello, I\'m interested in your coffee beans. Is the price negotiable?', createdAt: new Date(Date.now() - 3600000) },
+    { conversationId: conversation1.id, senderType: 'AGENT', text: 'Thank you for your interest in our Yirgacheffe coffee beans. The price is slightly negotiable for bulk orders. How many kilos are you interested in?', createdAt: new Date(Date.now() - 3500000) },
+    { conversationId: conversation1.id, senderType: 'USER', text: 'I was thinking about 5 kilos. What would be the price?', createdAt: new Date(Date.now() - 3400000) },
+    { conversationId: conversation1.id, senderType: 'AGENT', text: 'For 5 kilos, I can offer you a 5% discount. That would be 5,700 ETB instead of 6,000 ETB. Would you like to proceed with this order?', createdAt: new Date(Date.now() - 3300000) },
+  ];
+
+  await Promise.all(messages1.map(msg => 
+    prisma.message.create({ data: msg })
+  ));
+
+  // Create a draft order for the conversation
+  await prisma.draftOrder.create({
+    data: {
+      conversationId: conversation1.id,
+      listingId: listings[0].id,
+      buyerUserId: users[3].id,
+      sellerUserId: users[1].id,
+      quantity: 5,
+      priceAgreed: 5700,
+      status: 'DRAFT',
+      shippingInfo: JSON.stringify({
+        address: 'Bole Road, Addis Ababa',
+        contact: '+251900000004',
+        name: 'Kebede User'
+      })
+    }
+  });
+
+  // Create another conversation
+  const conversation2 = await prisma.conversation.create({
+    data: {
+      listingId: listings[1].id,
+      buyerUserId: users[0].id,  // Admin as buyer
+      sellerUserId: users[2].id,  // Brand as seller
+      status: 'PENDING_ORDER',
+    },
+  });
+
+  const messages2 = [
+    { conversationId: conversation2.id, senderType: 'USER', text: 'Hi, do you have this scarf in black?', createdAt: new Date(Date.now() - 7200000) },
+    { conversationId: conversation2.id, senderType: 'AGENT', text: 'Hello! Yes, we have the scarf in black. How many would you like?', createdAt: new Date(Date.now() - 7100000) },
+    { conversationId: conversation2.id, senderType: 'USER', text: 'I would like 2 pieces. Do you offer delivery?', createdAt: new Date(Date.now() - 7000000) },
+    { conversationId: conversation2.id, senderType: 'AGENT', text: 'Yes, we offer delivery within Addis Ababa for 100 ETB. Your total would be 1,800 ETB (2 x 850 + 100 delivery). Would you like to proceed?', createdAt: new Date(Date.now() - 6900000) },
+  ];
+
+  await Promise.all(messages2.map(msg => 
+    prisma.message.create({ data: msg })
+  ));
 
   // Additional Ethiopian customers
   const customers = [

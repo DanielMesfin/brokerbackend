@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MarketingSalesModule } from './marketing-sales/marketing-sales.module';
 import { ErpCrmModule } from './erp-crm/erp-crm.module';
 import { SocialLinksModule } from './social-links/social-links.module';
+import { AiAgentModule } from './ai-agent/ai-agent.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { SocialLinksModule } from './social-links/social-links.module';
     PrismaModule,
     MarketingSalesModule,
     ErpCrmModule,
-    SocialLinksModule
+    SocialLinksModule,
+    AiAgentModule
   ],
   controllers: [],
   providers: [],

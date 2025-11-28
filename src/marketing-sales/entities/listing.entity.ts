@@ -5,7 +5,9 @@ export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SOLD';
 type User = {
   id: string;
   email: string;
-  displayName: string | null;
+  firstName: string | null;
+  secondName: string | null;
+  phone: string | null;
   
 };
 

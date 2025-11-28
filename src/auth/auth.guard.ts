@@ -19,7 +19,7 @@ export class JwtPrismaGuard extends AuthGuard('jwt') {
     const user = await this.prisma.user.findUnique({ where: { id: jwtUser.userId } });
     if (!user) throw new UnauthorizedException();
     // attach sanitized user object
-    req.currentUser = { id: user.id, email: user.email, displayName: user.displayName };
+    req.currentUser = { id: user.id, email: user.email, firstName: user.firstName ?? null, secondName: user.secondName ?? null, phone: user.phone ?? null };
     return true;
   }
 }

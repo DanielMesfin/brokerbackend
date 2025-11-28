@@ -37,7 +37,9 @@ let MarketingSalesService = class MarketingSalesService {
                 user: {
                     select: {
                         id: true,
-                        displayName: true,
+                        firstName: true,
+                        secondName: true,
+                        phone: true,
                         email: true,
                     },
                 },
@@ -55,7 +57,9 @@ let MarketingSalesService = class MarketingSalesService {
                 user: {
                     select: {
                         id: true,
-                        displayName: true,
+                        firstName: true,
+                        secondName: true,
+                        phone: true,
                         email: true,
                     },
                 },
@@ -87,7 +91,9 @@ let MarketingSalesService = class MarketingSalesService {
                 user: {
                     select: {
                         id: true,
-                        displayName: true,
+                        firstName: true,
+                        secondName: true,
+                        phone: true,
                         email: true,
                     },
                 },
@@ -144,7 +150,9 @@ let MarketingSalesService = class MarketingSalesService {
                 user: {
                     select: {
                         id: true,
-                        displayName: true,
+                        firstName: true,
+                        secondName: true,
+                        phone: true,
                         email: true,
                     },
                 },

@@ -22,6 +22,7 @@ let JwtPrismaGuard = class JwtPrismaGuard extends (0, passport_1.AuthGuard)('jwt
         this.prisma = prisma;
     }
     async canActivate(context) {
+        var _a, _b, _c;
         const activate = (await super.canActivate(context));
         if (!activate)
             return false;
@@ -32,7 +33,7 @@ let JwtPrismaGuard = class JwtPrismaGuard extends (0, passport_1.AuthGuard)('jwt
         const user = await this.prisma.user.findUnique({ where: { id: jwtUser.userId } });
         if (!user)
             throw new common_1.UnauthorizedException();
-        req.currentUser = { id: user.id, email: user.email, displayName: user.displayName };
+        req.currentUser = { id: user.id, email: user.email, firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null, secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null, phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null };
         return true;
     }
 };

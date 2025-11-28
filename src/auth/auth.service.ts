@@ -6,14 +6,16 @@ import { PrismaService } from '../prisma/prisma.service';
 type PrismaUser = {
   id: string;
   email: string;
-  displayName?: string | null;
+  firstName?: string | null;
+  secondName?: string | null;
+  phone?: string | null;
 };
 
 @Injectable()
 export class AuthService {
   constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
-  async register(email: string, password: string, displayName?: string) {
+  async register(email: string, password: string, firstName?: string, secondName?: string, phone?: string) {
     if (!email || !password) {
       const { BadRequestException } = await import('@nestjs/common');
       throw new BadRequestException('Email and password are required');
@@ -33,7 +35,9 @@ export class AuthService {
       data: { 
         email: email, 
         passwordHash: hash, 
-        displayName: displayName || null,
+        firstName: firstName || null,
+        secondName: secondName || null,
+        phone: phone || null,
         role: 'USER',
         isActive: true
       } 
@@ -42,7 +46,9 @@ export class AuthService {
     return { 
       id: user.id, 
       email: user.email, 
-      displayName: user.displayName 
+      firstName: user.firstName ?? null,
+      secondName: user.secondName ?? null,
+      phone: user.phone ?? null,
     } as PrismaUser;
   }
 
@@ -74,12 +80,31 @@ export class AuthService {
     return { 
       id: user.id, 
       email: user.email, 
-      displayName: user.displayName 
+      firstName: user.firstName ?? null,
+      secondName: user.secondName ?? null,
+      phone: user.phone ?? null,
     } as PrismaUser;
+  }
+
+  async getPublicUserById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        profile: {
+          include: { socialLinks: true },
+        },
+      },
+    });
+    if (!user) return null;
+    // Exclude sensitive fields
+    const { passwordHash, refreshToken, ...rest } = user as any;
+    return rest;
   }
 
   async login(user: PrismaUser) {
     const payload = { sub: user.id, email: user.email };
-    return { accessToken: this.jwtService.sign(payload) };
+    const accessToken = this.jwtService.sign(payload);
+    const fullUser = await this.getPublicUserById(user.id);
+    return { accessToken, user: fullUser };
   }
 }

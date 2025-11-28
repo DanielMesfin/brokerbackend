@@ -1,32 +1,67 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiHeader, ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 class RegisterDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @ApiProperty({ example: 'securePassword123!' })
+  @IsString()
+  @MinLength(6)
+  @IsNotEmpty()
   password: string;
-  displayName?: string;
+
+  @ApiProperty({ example: 'John', required: false })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiProperty({ example: 'Doe', required: false })
+  @IsOptional()
+  @IsString()
+  secondName?: string;
+
+  @ApiProperty({ example: '+251900000000', required: false })
+  @IsOptional()
+  @IsString()
+  phone?: string;
 }
 
 class LoginDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @ApiProperty({ example: 'securePassword123!' })
+  @IsString()
+  @MinLength(6)
+  @IsNotEmpty()
   password: string;
 }
 
 class AuthResponse {
-  access_token: string;
+  accessToken: string;
   user: {
     id: string;
     email: string;
-    displayName?: string;
+    firstName?: string | null;
+    secondName?: string | null;
+    phone?: string | null;
   };
 }
 
 class UserResponse {
   id: string;
   email: string;
-  displayName?: string;
+  firstName?: string | null;
+  secondName?: string | null;
+  phone?: string | null;
 }
 
 @ApiTags('Authentication')
@@ -47,14 +82,16 @@ export class AuthController {
         value: {
           email: 'user@example.com',
           password: 'securePassword123!',
-          displayName: 'John Doe'
+          firstName: 'John',
+          secondName: 'Doe',
+          phone: '+251900000000'
         }
       }
     }
   })
   async register(@Body() body: RegisterDto): Promise<UserResponse> {
-    const user = await this.auth.register(body.email, body.password, body.displayName);
-    return { id: user.id, email: user.email, displayName: user.displayName };
+    const user = await this.auth.register(body.email, body.password, body.firstName, body.secondName, body.phone);
+    return { id: user.id, email: user.email, firstName: user.firstName ?? null, secondName: user.secondName ?? null, phone: user.phone ?? null };
   }
 
   @HttpCode(HttpStatus.OK)
@@ -85,7 +122,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Returns current user data', type: UserResponse })
+  @ApiResponse({ status: 200, description: 'Returns current user data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiHeader({
     name: 'Authorization',
@@ -101,7 +138,8 @@ export class AuthController {
     const token = auth.replace(/^Bearer\s+/i, '');
     try {
       const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'dev-secret' });
-      return { user: { id: payload.sub, email: payload.email } };
+      const user = await this.auth.getPublicUserById(payload.sub);
+      return { user };
     } catch (e) {
       throw new UnauthorizedException('Invalid token');
     }

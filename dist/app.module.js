@@ -16,6 +16,7 @@ const config_1 = require("@nestjs/config");
 const marketing_sales_module_1 = require("./marketing-sales/marketing-sales.module");
 const erp_crm_module_1 = require("./erp-crm/erp-crm.module");
 const social_links_module_1 = require("./social-links/social-links.module");
+const ai_agent_module_1 = require("./ai-agent/ai-agent.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,7 +30,8 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             marketing_sales_module_1.MarketingSalesModule,
             erp_crm_module_1.ErpCrmModule,
-            social_links_module_1.SocialLinksModule
+            social_links_module_1.SocialLinksModule,
+            ai_agent_module_1.AiAgentModule
         ],
         controllers: [],
         providers: [],

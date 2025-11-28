@@ -19,7 +19,8 @@ let AuthService = class AuthService {
         this.prisma = prisma;
         this.jwtService = jwtService;
     }
-    async register(email, password, displayName) {
+    async register(email, password, firstName, secondName, phone) {
+        var _a, _b, _c;
         if (!email || !password) {
             const { BadRequestException } = await Promise.resolve().then(() => require('@nestjs/common'));
             throw new BadRequestException('Email and password are required');
@@ -36,7 +37,9 @@ let AuthService = class AuthService {
             data: {
                 email: email,
                 passwordHash: hash,
-                displayName: displayName || null,
+                firstName: firstName || null,
+                secondName: secondName || null,
+                phone: phone || null,
                 role: 'USER',
                 isActive: true
             }
@@ -44,10 +47,13 @@ let AuthService = class AuthService {
         return {
             id: user.id,
             email: user.email,
-            displayName: user.displayName
+            firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null,
+            secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null,
+            phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null,
         };
     }
     async validateUser(email, password) {
+        var _a, _b, _c;
         if (!email) {
             return null;
         }
@@ -68,12 +74,30 @@ let AuthService = class AuthService {
         return {
             id: user.id,
             email: user.email,
-            displayName: user.displayName
+            firstName: (_a = user.firstName) !== null && _a !== void 0 ? _a : null,
+            secondName: (_b = user.secondName) !== null && _b !== void 0 ? _b : null,
+            phone: (_c = user.phone) !== null && _c !== void 0 ? _c : null,
         };
+    }
+    async getPublicUserById(id) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+            include: {
+                profile: {
+                    include: { socialLinks: true },
+                },
+            },
+        });
+        if (!user)
+            return null;
+        const { passwordHash, refreshToken, ...rest } = user;
+        return rest;
     }
     async login(user) {
         const payload = { sub: user.id, email: user.email };
-        return { accessToken: this.jwtService.sign(payload) };
+        const accessToken = this.jwtService.sign(payload);
+        const fullUser = await this.getPublicUserById(user.id);
+        return { accessToken, user: fullUser };
     }
 };
 exports.AuthService = AuthService;
