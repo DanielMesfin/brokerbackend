@@ -81,6 +81,21 @@ __decorate([
     (0, class_validator_1.IsIn)(exports.USER_ROLES, { message: 'Invalid user role. Must be one of: ' + exports.USER_ROLES.join(', ') }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        example: '+1234567890',
+        description: 'User\'s phone number in international format',
+        required: false,
+        maxLength: 20
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: 'Phone number must be a string' }),
+    (0, class_validator_1.Matches)(/^\+?[1-9]\d{1,14}$/, {
+        message: 'Please provide a valid phone number in international format (e.g., +1234567890)'
+    }),
+    (0, class_validator_1.MaxLength)(20, { message: 'Phone number cannot be longer than 20 characters' }),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "phone", void 0);
 class LoginDto {
 }
 __decorate([
