@@ -62,6 +62,20 @@ class RegisterDto {
   @IsString({ message: 'Role must be a string' })
   @IsIn(USER_ROLES, { message: 'Invalid user role. Must be one of: ' + USER_ROLES.join(', ') })
   role?: UserRole;
+
+  @ApiProperty({
+    example: '+1234567890',
+    description: 'User\'s phone number in international format',
+    required: false,
+    maxLength: 20
+  })
+  @IsOptional()
+  @IsString({ message: 'Phone number must be a string' })
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Please provide a valid phone number in international format (e.g., +1234567890)'
+  })
+  @MaxLength(20, { message: 'Phone number cannot be longer than 20 characters' })
+  phone?: string;
 }
 
 class LoginDto {
