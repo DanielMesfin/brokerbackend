@@ -231,7 +231,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Business deleted successfully' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
+    __param(1, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
@@ -281,7 +281,7 @@ __decorate([
     __param(2, (0, common_1.Body)('type')),
     __param(3, (0, common_1.Body)('issueDate')),
     __param(4, (0, common_1.Body)('expiryDate')),
-    __param(5, (0, common_1.Request)()),
+    __param(5, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, String, String, String, Object]),
     __metadata("design:returntype", Promise)
@@ -295,7 +295,7 @@ __decorate([
     __param(0, (0, common_1.Param)('documentId')),
     __param(1, (0, common_1.Body)('status')),
     __param(2, (0, common_1.Body)('reason')),
-    __param(3, (0, common_1.Request)()),
+    __param(3, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String, String, Object]),
     __metadata("design:returntype", Promise)
@@ -362,7 +362,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('reason')),
-    __param(2, (0, common_1.Request)()),
+    __param(2, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
@@ -374,7 +374,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Business is not suspended' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
+    __param(1, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)

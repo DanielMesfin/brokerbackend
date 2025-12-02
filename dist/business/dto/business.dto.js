@@ -420,16 +420,16 @@ __decorate([
     __metadata("design:type", Boolean)
 ], BusinessComplianceDto.prototype, "isSuspended", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Reason for suspension if applicable' }),
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Reason for suspension if applicable', nullable: true }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], BusinessComplianceDto.prototype, "suspensionReason", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Suspension timestamp', type: 'string', format: 'date-time' }),
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Suspension timestamp', type: 'string', format: 'date-time', nullable: true }),
     (0, class_validator_1.IsDateString)(),
     (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", Date)
+    __metadata("design:type", Object)
 ], BusinessComplianceDto.prototype, "suspendedAt", void 0);
 class BusinessResponseDto {
 }
@@ -613,9 +613,9 @@ __decorate([
     __metadata("design:type", String)
 ], ComplianceRequirementUpdateDto.prototype, "name", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Description of the requirement' }),
+    (0, swagger_1.ApiProperty)({ description: 'Description of the requirement' }),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], ComplianceRequirementUpdateDto.prototype, "description", void 0);
 __decorate([

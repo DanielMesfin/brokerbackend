@@ -63,6 +63,18 @@ export class BusinessDocument {
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
+  @Column({ type: 'uuid' })
+  uploadedBy: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  verifiedBy: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  verifiedAt: Date;
+
+  @Column({ type: 'timestamp' })
+  uploadedAt: Date;
+
   @ManyToOne(() => Business, (business) => business.documents, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'businessId' })
   business: Business;

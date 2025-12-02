@@ -88,6 +88,22 @@ __decorate([
     __metadata("design:type", Object)
 ], BusinessDocument.prototype, "metadata", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'uuid' }),
+    __metadata("design:type", String)
+], BusinessDocument.prototype, "uploadedBy", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", String)
+], BusinessDocument.prototype, "verifiedBy", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], BusinessDocument.prototype, "verifiedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp' }),
+    __metadata("design:type", Date)
+], BusinessDocument.prototype, "uploadedAt", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => business_entity_1.Business, (business) => business.documents, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'businessId' }),
     __metadata("design:type", business_entity_1.Business)

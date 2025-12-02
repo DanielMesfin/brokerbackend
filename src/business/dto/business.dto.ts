@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEmail, IsPhoneNumber, IsUrl, IsEnum, IsOptional, IsArray, IsDateString, IsBoolean, IsNumber, IsObject, ValidateNested, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsEmail, IsPhoneNumber, IsUrl, IsBoolean, IsNumber, IsArray, ValidateNested, IsDateString, IsObject, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BusinessType, BusinessStatus } from '../entities/business.entity';
 import { DocumentType, DocumentStatus } from '../entities/business-document.entity';
@@ -349,15 +349,15 @@ export class BusinessComplianceDto {
   @IsBoolean()
   isSuspended: boolean;
 
-  @ApiPropertyOptional({ description: 'Reason for suspension if applicable' })
+  @ApiPropertyOptional({ description: 'Reason for suspension if applicable', nullable: true })
   @IsString()
   @IsOptional()
-  suspensionReason?: string;
+  suspensionReason?: string | null;
 
-  @ApiPropertyOptional({ description: 'Suspension timestamp', type: 'string', format: 'date-time' })
+  @ApiPropertyOptional({ description: 'Suspension timestamp', type: 'string', format: 'date-time', nullable: true })
   @IsDateString()
   @IsOptional()
-  suspendedAt?: Date;
+  suspendedAt?: Date | null;
 }
 
 export class BusinessResponseDto {
@@ -499,10 +499,10 @@ export class ComplianceRequirementUpdateDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiPropertyOptional({ description: 'Description of the requirement' })
+  @ApiProperty({ description: 'Description of the requirement' })
   @IsString()
-  @IsOptional()
-  description?: string;
+  @IsNotEmpty()
+  description: string;
 
   @ApiProperty({ description: 'Whether this requirement is mandatory' })
   @IsBoolean()

@@ -13,13 +13,13 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   UseGuards,
-  Request,
+  Request as NestRequest,
   BadRequestException,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { Express } from 'express';
 
 import { BusinessService } from './business.service';
 import { 
@@ -32,9 +32,15 @@ import {
   ComplianceRequirementUpdateDto,
 } from './dto/business.dto';
 import { DocumentType } from './entities/business-document.entity';
-import { BusinessStatus, BusinessType } from './entities/business.entity';
+import { Business, BusinessStatus, BusinessType } from './entities/business.entity';
 import { VerificationStatus } from './entities/business-verification.entity';
 import { ComplianceStatus } from './entities/business-compliance.entity';
+
+interface RequestWithUser extends ExpressRequest {
+  user: {
+    id: string;
+  };
+}
 
 @ApiTags('Businesses')
 @Controller('businesses')
@@ -47,7 +53,10 @@ export class BusinessController {
   @ApiOperation({ summary: 'Register a new business' })
   @ApiResponse({ status: 201, description: 'Business registered successfully', type: BusinessResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-  async create(@Body() createBusinessDto: CreateBusinessDto, @Request() req): Promise<BusinessResponseDto> {
+  async create(
+    @Body() createBusinessDto: CreateBusinessDto, 
+    @NestRequest() req: RequestWithUser
+  ): Promise<BusinessResponseDto> {
     return this.businessService.create(createBusinessDto, req.user.id);
   }
 
@@ -133,7 +142,7 @@ export class BusinessController {
   async update(
     @Param('id') id: string,
     @Body() updateBusinessDto: UpdateBusinessDto,
-    @Request() req,
+    @NestRequest() req: RequestWithUser,
   ): Promise<BusinessResponseDto> {
     return this.businessService.update(id, updateBusinessDto, req.user.id);
   }
@@ -142,7 +151,10 @@ export class BusinessController {
   @ApiOperation({ summary: 'Delete a business' })
   @ApiResponse({ status: 200, description: 'Business deleted successfully' })
   @ApiResponse({ status: 404, description: 'Business not found' })
-  async remove(@Param('id') id: string, @Request() req): Promise<void> {
+  async remove(
+    @Param('id') id: string, 
+    @Request() req: RequestWithUser
+  ): Promise<void> {
     return this.businessService.remove(id, req.user.id);
   }
 
@@ -221,7 +233,7 @@ export class BusinessController {
     @Param('documentId') documentId: string,
     @Body('status') status: 'approve' | 'reject',
     @Body('reason') reason?: string,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ) {
     return this.businessService.verifyDocument(documentId, req.user.id, status, reason);
   }
@@ -235,7 +247,7 @@ export class BusinessController {
     @Param('id') id: string,
     @Body('status') status: 'approve' | 'reject',
     @Body('reason') reason?: string,
-    @Request() req,
+    @NestRequest() req: RequestWithUser,
   ) {
     return this.businessService.verifyBusiness(id, req.user.id, status, reason);
   }
@@ -257,7 +269,7 @@ export class BusinessController {
   async addComplianceRequirement(
     @Param('id') id: string,
     @Body() requirement: ComplianceRequirementUpdateDto,
-    @Request() req,
+    @NestRequest() req: RequestWithUser,
   ) {
     return this.businessService.addComplianceRequirement(id, requirement, req.user.id);
   }
@@ -290,7 +302,7 @@ export class BusinessController {
   async suspendBusiness(
     @Param('id') id: string,
     @Body('reason') reason: string,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ) {
     const business = await this.businessService.findOne(id);
     if (business.status === BusinessStatus.SUSPENDED) {
@@ -311,7 +323,7 @@ export class BusinessController {
   @ApiResponse({ status: 404, description: 'Business not found' })
   async activateBusiness(
     @Param('id') id: string,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ) {
     const business = await this.businessService.findOne(id);
     if (business.status !== BusinessStatus.SUSPENDED) {

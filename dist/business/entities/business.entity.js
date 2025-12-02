@@ -133,6 +133,14 @@ __decorate([
     __metadata("design:type", business_compliance_entity_1.BusinessCompliance)
 ], Business.prototype, "compliance", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'uuid' }),
+    __metadata("design:type", String)
+], Business.prototype, "createdBy", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", String)
+], Business.prototype, "updatedBy", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Business.prototype, "createdAt", void 0);

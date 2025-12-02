@@ -34,38 +34,44 @@ let BusinessService = class BusinessService {
         if (existingBusiness) {
             throw new common_1.BadRequestException('Business with this registration number already exists');
         }
-        const business = this.businessRepository.create({
-            ...createBusinessDto,
-            status: business_entity_1.BusinessStatus.PENDING_VERIFICATION,
-            createdBy: userId,
-        });
-        const verification = this.verificationRepository.create({
-            status: business_verification_entity_1.VerificationStatus.PENDING,
-            verificationMethod: business_verification_entity_1.VerificationMethod.MANUAL,
-        });
-        const compliance = this.complianceRepository.create({
-            status: business_compliance_entity_1.ComplianceStatus.NON_COMPLIANT,
-            complianceScore: 0,
-            requirements: this.getDefaultComplianceRequirements(),
-            settings: {
-                autoSuspend: true,
-                notifyDaysBeforeExpiry: [30, 15, 7, 1],
-                notifyOn: {
-                    email: true,
-                    sms: true,
-                    inApp: true,
+        return this.businessRepository.manager.transaction(async (transactionalEntityManager) => {
+            const business = this.businessRepository.create({
+                ...createBusinessDto,
+                status: business_entity_1.BusinessStatus.PENDING_VERIFICATION,
+                createdBy: userId,
+            });
+            const savedBusiness = await transactionalEntityManager.save(business_entity_1.Business, business);
+            const verification = this.verificationRepository.create({
+                status: business_verification_entity_1.VerificationStatus.PENDING,
+                verificationMethod: business_verification_entity_1.VerificationMethod.MANUAL,
+                business: savedBusiness,
+                businessId: savedBusiness.id,
+            });
+            const compliance = this.complianceRepository.create({
+                status: business_compliance_entity_1.ComplianceStatus.NON_COMPLIANT,
+                complianceScore: 0,
+                requirements: this.getDefaultComplianceRequirements(),
+                business: savedBusiness,
+                businessId: savedBusiness.id,
+                settings: {
+                    autoSuspend: true,
+                    notifyDaysBeforeExpiry: [30, 15, 7, 1],
+                    notifyOn: {
+                        email: true,
+                        sms: true,
+                        inApp: true,
+                    },
+                    gracePeriodDays: 7,
                 },
-                gracePeriodDays: 7,
-            },
+            });
+            const [savedVerification, savedCompliance] = await Promise.all([
+                transactionalEntityManager.save(business_verification_entity_1.BusinessVerification, verification),
+                transactionalEntityManager.save(business_compliance_entity_1.BusinessCompliance, compliance)
+            ]);
+            savedBusiness.verification = savedVerification;
+            savedBusiness.compliance = savedCompliance;
+            return transactionalEntityManager.save(business_entity_1.Business, savedBusiness);
         });
-        const savedBusiness = await this.businessRepository.save(business);
-        verification.businessId = savedBusiness.id;
-        compliance.businessId = savedBusiness.id;
-        await this.verificationRepository.save(verification);
-        await this.complianceRepository.save(compliance);
-        savedBusiness.verification = verification;
-        savedBusiness.compliance = compliance;
-        return this.businessRepository.save(savedBusiness);
     }
     async findAll(queryParams = {}) {
         const { status, search, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'DESC', complianceStatus, verificationStatus, } = queryParams;

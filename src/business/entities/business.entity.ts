@@ -102,7 +102,12 @@ export class Business {
   @JoinColumn()
   compliance: BusinessCompliance;
 
-  // Timestamps
+  @Column({ type: 'uuid' })
+  createdBy: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  updatedBy: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
