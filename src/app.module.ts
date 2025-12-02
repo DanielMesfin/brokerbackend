@@ -9,22 +9,36 @@ import { ErpCrmModule } from './erp-crm/erp-crm.module';
 import { SocialLinksModule } from './social-links/social-links.module';
 import { AiAgentModule } from './ai-agent/ai-agent.module';
 
+/**
+ * Root application module that imports all feature modules.
+ * PrismaModule is imported here to make PrismaService available throughout the application.
+ * ConfigModule is set as global to provide configuration throughout the app.
+ */
 @Module({
   imports: [
+    // Global configuration module (loads .env file)
     ConfigModule.forRoot({ 
       isGlobal: true,
       envFilePath: '.env',
+      expandVariables: true,
     }),
+    
+    // PrismaModule is marked as @Global() so it's available everywhere
     PrismaModule,
+    
+    // Feature modules with circular dependencies handled by forwardRef
     forwardRef(() => AuthModule),
-    UsersModule, 
+    
+    // Application feature modules
+    UsersModule,
     PostsModule,
     MarketingSalesModule,
     ErpCrmModule,
     SocialLinksModule,
-    AiAgentModule
+    AiAgentModule,
   ],
   controllers: [],
   providers: [],
+  exports: [],
 })
 export class AppModule {}

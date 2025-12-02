@@ -4,7 +4,11 @@ import { Prisma } from '@prisma/client';
 
 type BusinessWithRelations = Prisma.BusinessGetPayload<{
   include: {
-    members: true;
+    members: {
+      include: {
+        user: true;
+      };
+    };
     listings: true;
     documents: true;
     verifications: true;
@@ -21,29 +25,39 @@ export class BusinessPrismaService {
     return this.prisma.business.create({ 
       data,
       include: {
-        members: true,
+        members: {
+          include: {
+            user: true
+          }
+        },
         listings: true,
         documents: true,
         verifications: true,
         compliances: true
       }
-    });
+    }) as unknown as BusinessWithRelations;
   }
 
   async findBusiness(
     where: Prisma.BusinessWhereUniqueInput,
     includeRelations: boolean = true
-  ): Promise<BusinessWithRelations | null> {
-    return this.prisma.business.findUnique({ 
+  ): Promise<BusinessWithRelations | Prisma.BusinessGetPayload<{}> | null> {
+    const business = await this.prisma.business.findUnique({ 
       where,
       include: includeRelations ? {
-        members: true,
+        members: {
+          include: {
+            user: true
+          }
+        },
         listings: true,
         documents: true,
         verifications: true,
         compliances: true
       } : undefined
     });
+    
+    return business as unknown as BusinessWithRelations | null;
   }
 
   async updateBusiness(params: {
@@ -55,26 +69,34 @@ export class BusinessPrismaService {
       where, 
       data,
       include: {
-        members: true,
+        members: {
+          include: {
+            user: true
+          }
+        },
         listings: true,
         documents: true,
         verifications: true,
         compliances: true
       }
-    });
+    }) as unknown as BusinessWithRelations;
   }
 
   async deleteBusiness(where: Prisma.BusinessWhereUniqueInput): Promise<BusinessWithRelations> {
     return this.prisma.business.delete({ 
       where,
       include: {
-        members: true,
+        members: {
+          include: {
+            user: true
+          }
+        },
         listings: true,
         documents: true,
         verifications: true,
         compliances: true
       }
-    });
+    }) as unknown as BusinessWithRelations;
   }
 
   // Business Member operations
@@ -99,7 +121,7 @@ export class BusinessPrismaService {
   }
 
   // Business Verification operations
-  async createVerification(data: any) {
+  async createVerification(data: Prisma.VerificationCodeCreateInput) {
     return this.prisma.verificationCode.create({ 
       data,
       include: {
@@ -109,26 +131,29 @@ export class BusinessPrismaService {
   }
 
   async updateVerificationStatus(params: {
-    where: { id: string };
-    status: string;
-    verifiedById?: string;
-    notes?: string;
-  }) {
-    const { where, status, verifiedById, notes } = params;
-    return this.prisma.verificationCode.update({
-      where,
-      data: {
-        status,
-        verifiedAt: status === 'APPROVED' ? new Date() : undefined,
-        verifiedById,
-        notes
-      },
-      include: {
-        user: true
-      }
-    });
-  }
+  where: { id: string };
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verifiedById?: string;
+  notes?: string;
+}) {
+  const { where, status, verifiedById, notes } = params;
+  
+  // Create a properly typed update data object
+  const updateData: Prisma.VerificationCodeUpdateInput = {
+    status: status as any, // Type assertion needed due to Prisma's generated types
+    ...(status === 'APPROVED' && { verifiedAt: new Date() }),
+    ...(verifiedById && { verifiedBy: { connect: { id: verifiedById } } }),
+    ...(notes && { notes })
+  };
 
+  return this.prisma.verificationCode.update({
+    where,
+    data: updateData,
+    include: {
+      user: true
+    }
+  });
+}
   // Document management
   async uploadDocument(data: Prisma.BusinessDocumentCreateInput) {
     return this.prisma.businessDocument.create({ 
@@ -170,9 +195,23 @@ export class BusinessPrismaService {
   }
 
   // Compliance operations
-  async recordComplianceAcceptance(data: Prisma.BusinessComplianceCreateInput) {
+  async recordComplianceAcceptance(data: {
+    businessId: string;
+    acceptedById?: string;
+    complianceType: string;
+    version?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }) {
     return this.prisma.businessCompliance.create({
-      data,
+      data: {
+        business: { connect: { id: data.businessId } },
+        ...(data.acceptedById ? { acceptedBy: { connect: { id: data.acceptedById } } } : {}),
+        complianceType: data.complianceType,
+        version: data.version,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent
+      },
       include: {
         business: true,
         acceptedBy: true
@@ -209,10 +248,14 @@ export class BusinessPrismaService {
       where,
       orderBy,
       include: {
-        members: true,
+        members: {
+          include: {
+            user: true
+          }
+        },
         documents: true,
         verifications: true
       }
-    });
+    }) as unknown as BusinessWithRelations[];
   }
 }

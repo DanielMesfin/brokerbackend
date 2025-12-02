@@ -166,10 +166,26 @@ export class BusinessService {
   async update(id: string, updateBusinessDto: UpdateBusinessDto, userId: string): Promise<Business> {
     const business = await this.findOne(id);
     
-    // Prevent updating certain fields directly
-    const { status, verification, compliance, ...safeUpdates } = updateBusinessDto;
+    // Handle suspension status
+    if ('status' in updateBusinessDto) {
+      if (updateBusinessDto.status === BusinessStatus.SUSPENDED) {
+        business.status = BusinessStatus.SUSPENDED;
+        business.suspensionReason = (updateBusinessDto as any).suspensionReason || 'Business suspended';
+        business.suspendedAt = new Date();
+      } else if (business.status === BusinessStatus.SUSPENDED && updateBusinessDto.status === BusinessStatus.VERIFIED) {
+        // Reactivating a suspended business
+        business.status = BusinessStatus.VERIFIED;
+        business.suspensionReason = null;
+        business.suspendedAt = null;
+      } else {
+        business.status = updateBusinessDto.status;
+      }
+    }
     
+    // Update other fields
+    const { status, verification, compliance, suspensionReason, suspendedAt, ...safeUpdates } = updateBusinessDto;
     Object.assign(business, safeUpdates);
+    
     business.updatedBy = userId;
     
     return this.businessRepository.save(business);
@@ -239,6 +255,38 @@ export class BusinessService {
     await this.updateComplianceStatus(document.businessId);
     
     return updatedDoc;
+  }
+
+  private async updateComplianceStatus(businessId: string): Promise<void> {
+    const business = await this.findOne(businessId);
+    const compliance = business.compliance;
+    
+    // Update compliance status based on requirements
+    const requirements = compliance.requirements || [];
+    const totalRequirements = requirements.length;
+    const completedRequirements = requirements.filter(r => r.status === ComplianceRequirementStatus.VERIFIED).length;
+    
+    // Calculate compliance score (0-100)
+    const complianceScore = totalRequirements > 0 
+      ? Math.round((completedRequirements / totalRequirements) * 100) 
+      : 0;
+    
+    // Update compliance status based on score
+    let newStatus = compliance.status;
+    if (complianceScore === 100) {
+      newStatus = ComplianceStatus.COMPLIANT;
+    } else if (complianceScore >= 70) {
+      newStatus = ComplianceStatus.AT_RISK;
+    } else {
+      newStatus = ComplianceStatus.NON_COMPLIANT;
+    }
+    
+    // Only update if changed
+    if (complianceScore !== compliance.complianceScore || newStatus !== compliance.status) {
+      compliance.complianceScore = complianceScore;
+      compliance.status = newStatus;
+      await this.complianceRepository.save(compliance);
+    }
   }
 
   // Verification Management

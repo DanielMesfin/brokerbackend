@@ -2,51 +2,52 @@ generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model KnowledgeDoc {
   id        String   @id @default(uuid())
   title     String
   source    String?
   text      String
-  embedding String? // base64 or JSON string for simple storage
+  embedding String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([title])
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id                  String             @id @default(uuid())
-  email               String             @unique
+  id                  String               @id @default(uuid())
+  email               String               @unique
   passwordHash        String
   firstName           String?
   secondName          String?
   phone               String?
-  role                String             @default("USER")
-  isActive            Boolean            @default(true)
+  role                String               @default("USER")
+  isActive            Boolean              @default(true)
   lastLogin           DateTime?
   refreshToken        String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  comments            Comment[]
-  likes               Like[]
-  posts               Post[]
-  listings            Listing[]
-  profile             UserProfile?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   businesses          BusinessMember[]
-  sentConnections     Connection[]       @relation("SentConnections")
-  receivedConnections Connection[]       @relation("ReceivedConnections")
-  buyerConversations  Conversation[]     @relation("BuyerConversations")
-  sellerConversations Conversation[]     @relation("SellerConversations")
-  buyerDraftOrders    DraftOrder[]       @relation("BuyerDraftOrders")
-  sellerDraftOrders   DraftOrder[]       @relation("SellerDraftOrders")
+  comments            Comment[]
+  receivedConnections Connection[]         @relation("ReceivedConnections")
+  sentConnections     Connection[]         @relation("SentConnections")
+  buyerConversations  Conversation[]       @relation("BuyerConversations")
+  sellerConversations Conversation[]       @relation("SellerConversations")
+  buyerDraftOrders    DraftOrder[]         @relation("BuyerDraftOrders")
+  sellerDraftOrders   DraftOrder[]         @relation("SellerDraftOrders")
+  likes               Like[]
+  listings            Listing[]
+  posts               Post[]
+  profile             UserProfile?
   verificationCodes   VerificationCode[]
-  verifiedVerifications BusinessVerification[] @relation("VerifiedByUser")
-  acceptedCompliances  BusinessCompliance[]    @relation("AcceptedByUser")
+  verifiedVerifications VerificationCode[] @relation("VerifiedVerifications")
+  uploadedDocuments   BusinessDocument[]
+  acceptedCompliances BusinessCompliance[] @relation("AcceptedCompliances")
 }
 
 model UserProfile {
@@ -60,21 +61,34 @@ model UserProfile {
   isVerified    Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  user          User        @relation(fields: [userId], references: [id])
-  socialLinks   SocialLink? @relation(fields: [socialLinksId], references: [id])
   socialLinksId String?     @unique
+  socialLinks   SocialLink? @relation(fields: [socialLinksId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model VerificationCode {
-  id        String   @id @default(uuid())
-  userId    String
-  code      String
-  type      String // 'EMAIL' or 'PHONE'
-  isUsed    Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
+  id         String             @id @default(uuid())
+  userId     String
+  businessId String?
+  code       String
+  type       String
+  isUsed     Boolean            @default(false)
+  status     VerificationStatus @default(PENDING)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  user       User               @relation(fields: [userId], references: [id])
+  business   Business?          @relation(fields: [businessId], references: [id])
+  verifiedBy User?              @relation("VerifiedVerifications", fields: [verifiedById], references: [id])
+  verifiedById String?
 
   @@unique([userId, type], name: "userId_type")
 }
@@ -112,92 +126,62 @@ model Post {
 }
 
 model Business {
-  id           String               @id @default(uuid())
-  name         String
-  description  String?
-  logo         String?
-  website      String?
-  industry     String?
-  size         String? // e.g., '1-10', '11-50', '51-200', '201-500', '500+'
-  isVerified   Boolean              @default(false)
-  taxId        String?
-  registrationNumber String?
-  country      String?
-  address      String?
-  city         String?
-  state        String?
-  postalCode   String?
-  phone        String?
-  email        String?
-  status       String              @default("PENDING") // PENDING, ACTIVE, SUSPENDED
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  members      BusinessMember[]
-  listings     Listing[]
-  documents    BusinessDocument[]
-  verifications BusinessVerification[]
-  compliances  BusinessCompliance[]
+  id            String               @id @default(uuid())
+  name          String
+  description   String?
+  logo          String?
+  website       String?
+  industry      String?
+  size          String?
+  isVerified    Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  members       BusinessMember[]
+  listings      Listing[]
+  documents     BusinessDocument[]
+  verifications VerificationCode[]
+  compliances   BusinessCompliance[] @relation("BusinessCompliances")
 
   @@index([name])
   @@index([industry])
-  @@index([status])
-  @@index([taxId])
-  @@index([registrationNumber])
 }
 
-model BusinessVerification {
-  id           String    @id @default(uuid())
+model BusinessDocument {
+  id           String   @id @default(uuid())
+  name         String
+  url          String
+  type         String?
+  business     Business @relation(fields: [businessId], references: [id])
   businessId   String
-  type         String    // TAX_ID, REGISTRATION, BANK_ACCOUNT, etc.
-  status       String    @default("PENDING") // PENDING, APPROVED, REJECTED
-  documentUrl  String?
-  verifiedAt   DateTime?
-  verifiedById String?
-  notes        String?
-  metadata     String?   // JSON string for additional data
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  business     Business  @relation(fields: [businessId], references: [id])
-  verifiedBy   User?     @relation("VerifiedByUser", fields: [verifiedById], references: [id])
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([businessId])
-  @@index([status])
   @@index([type])
 }
 
 model BusinessCompliance {
-  id               String    @id @default(uuid())
-  businessId       String
-  policyVersion    String
-  acceptedAt       DateTime  @default(now())
-  acceptedByUserId String
-  ipAddress        String?
-  userAgent        String?
-  business         Business  @relation(fields: [businessId], references: [id])
-  acceptedBy       User      @relation("AcceptedByUser", fields: [acceptedByUserId], references: [id])
+  id             String   @id @default(uuid())
+  businessId     String
+  business       Business @relation("BusinessCompliances", fields: [businessId], references: [id])
+  acceptedById   String?
+  acceptedBy     User?    @relation("AcceptedCompliances", fields: [acceptedById], references: [id])
+  acceptedAt     DateTime @default(now())
+  complianceType String // e.g., 'TERMS_OF_SERVICE', 'PRIVACY_POLICY', etc.
+  version        String? // Version of the compliance document
+  ipAddress      String? // IP address of the user who accepted
+  userAgent      String? // User agent of the user who accepted
+  listingId      String?
+  listing        Listing? @relation("ListingCompliances", fields: [listingId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([businessId])
-  @@index([acceptedByUserId])
-}
-
-model BusinessDocument {
-  id          String    @id @default(uuid())
-  businessId  String
-  type        String    // TAX_ID, REGISTRATION, LICENSE, OTHER
-  name        String
-  description String?
-  fileUrl     String
-  fileType    String?
-  fileSize    Int?      // Size in bytes
-  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED
-  metadata    String?   // JSON string for additional data
-  uploadedAt  DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  business    Business  @relation(fields: [businessId], references: [id])
-
-  @@index([businessId])
-  @@index([type])
-  @@index([status])
+  @@index([acceptedById])
+  @@index([complianceType])
+  @@index([listingId])
 }
 
 model BusinessMember {
@@ -206,8 +190,8 @@ model BusinessMember {
   businessId String
   role       String   @default("MEMBER")
   joinedAt   DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
   business   Business @relation(fields: [businessId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -220,8 +204,8 @@ model Connection {
   status      String    @default("PENDING")
   message     String?
   connectedAt DateTime?
-  sender      User      @relation("SentConnections", fields: [senderId], references: [id])
   receiver    User      @relation("ReceivedConnections", fields: [receiverId], references: [id])
+  sender      User      @relation("SentConnections", fields: [senderId], references: [id])
 
   @@unique([senderId, receiverId])
   @@index([receiverId])
@@ -229,31 +213,32 @@ model Connection {
 }
 
 model Listing {
-  id             String         @id @default(uuid())
+  id             String               @id @default(uuid())
   title          String
   description    String
-  type           String // 'C2C', 'B2B', 'B2C', 'B2G'
+  type           String
   price          Float
   category       String
-  tags           String // Stored as JSON string
+  tags           String
   commissionRate Float?
-  isNegotiable   Boolean        @default(false)
-  imageUrls      String? // Stored as JSON string
-  userId         String? // Nullable for business listings
-  businessId     String? // If listing is posted by a business
-  isActive       Boolean        @default(true)
-  views          Int            @default(0)
-  status         String         @default("PENDING") // 'DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'SOLD', 'EXPIRED'
-  quantity       Int            @default(1)
-  minOrder       Int            @default(1)
+  isNegotiable   Boolean              @default(false)
+  imageUrls      String?
+  userId         String?
+  businessId     String?
+  isActive       Boolean              @default(true)
+  views          Int                  @default(0)
+  status         String               @default("PENDING")
+  quantity       Int                  @default(1)
+  minOrder       Int                  @default(1)
   maxOrder       Int?
-  leadTime       String? // e.g., '1-2 weeks', '3-5 days'
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  user           User?          @relation(fields: [userId], references: [id])
-  business       Business?      @relation(fields: [businessId], references: [id])
+  leadTime       String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   conversations  Conversation[]
   DraftOrder     DraftOrder[]
+  business       Business?            @relation(fields: [businessId], references: [id])
+  compliances    BusinessCompliance[] @relation("ListingCompliances")
+  user           User?                @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([businessId])
@@ -283,8 +268,8 @@ model Like {
   postId    String
   userId    String
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
   post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId])
   @@index([postId])
@@ -324,15 +309,15 @@ model Conversation {
   listingId    String?
   buyerUserId  String?
   sellerUserId String?
-  status       String       @default("DRAFT") // DRAFT, PUBLISHED, SOLD, ARCHIVED
+  status       String       @default("DRAFT")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  listing      Listing?     @relation(fields: [listingId], references: [id])
-  buyer        User?        @relation("BuyerConversations", fields: [buyerUserId], references: [id])
-  seller       User?        @relation("SellerConversations", fields: [sellerUserId], references: [id])
-  messages     Message[]
   agentRuns    AgentRun[]
+  buyer        User?        @relation("BuyerConversations", fields: [buyerUserId], references: [id])
+  listing      Listing?     @relation(fields: [listingId], references: [id])
+  seller       User?        @relation("SellerConversations", fields: [sellerUserId], references: [id])
   draftOrders  DraftOrder[]
+  messages     Message[]
 
   @@index([listingId])
   @@index([buyerUserId])
@@ -341,50 +326,47 @@ model Conversation {
 
 /// A single message in a conversation, from USER, AGENT, or ADMIN
 model Message {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
-  senderType     String // USER | AGENT | ADMIN
+  senderType     String
   text           String
-  metadata       String? // JSON string for structured data
-  createdAt      DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
+  metadata       String?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId])
 }
 
 /// Records an AI agent run/decision for traceability
 model AgentRun {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
-  input          String // JSON input to the agent
-  output         String // JSON output from the agent
-  decision       String // ASK | COLLECT | ESCALATE | PLACE_ORDER | CLOSE
-  createdAt      DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
+  input          String
+  output         String
+  decision       String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId])
 }
 
 /// A draft order created by the agent pending confirmation
 model DraftOrder {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   listingId      String
   buyerUserId    String
   sellerUserId   String
-  quantity       Int      @default(1)
+  quantity       Int          @default(1)
   priceAgreed    Float?
-  status         String   @default("DRAFT") // DRAFT | PENDING | CONFIRMED | CANCELLED
-  shippingInfo   String? // JSON (address, method)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  listing      Listing      @relation(fields: [listingId], references: [id])
-  buyer        User         @relation("BuyerDraftOrders", fields: [buyerUserId], references: [id])
-  seller       User         @relation("SellerDraftOrders", fields: [sellerUserId], references: [id])
+  status         String       @default("DRAFT")
+  shippingInfo   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  buyer          User         @relation("BuyerDraftOrders", fields: [buyerUserId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  listing        Listing      @relation(fields: [listingId], references: [id])
+  seller         User         @relation("SellerDraftOrders", fields: [sellerUserId], references: [id])
 
   @@index([conversationId])
   @@index([listingId])

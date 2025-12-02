@@ -20,6 +20,7 @@ import { Request as ExpressRequest } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express';
 
 import { BusinessService } from './business.service';
 import { 
@@ -108,12 +109,12 @@ export class BusinessController {
   @ApiOperation({ summary: 'Get all compliance statuses' })
   @ApiResponse({ status: 200, description: 'List of compliance statuses' })
   getComplianceStatuses(): { value: string; label: string }[] {
-    return Object.entries(ComplianceStatus).map(([key, value]) => ( 
-      key !== 'COMPLIANCE_STATUS' && {
-        value,
+    return Object.entries(ComplianceStatus)
+      .filter(([key]) => key !== 'COMPLIANCE_STATUS')
+      .map(([key, value]) => ({
+        value: value as string,
         label: key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' '),
-      }
-    )).filter(Boolean);
+      }));
   }
 
   @Get('document-types')
@@ -153,7 +154,7 @@ export class BusinessController {
   @ApiResponse({ status: 404, description: 'Business not found' })
   async remove(
     @Param('id') id: string, 
-    @Request() req: RequestWithUser
+    @NestRequest() req: RequestWithUser
   ): Promise<void> {
     return this.businessService.remove(id, req.user.id);
   }
@@ -205,7 +206,7 @@ export class BusinessController {
     @Body('type') type: DocumentType,
     @Body('issueDate') issueDate?: string,
     @Body('expiryDate') expiryDate?: string,
-    @Request() req,
+    @NestRequest() req: RequestWithUser,
   ): Promise<DocumentUploadResponseDto> {
     if (!Object.values(DocumentType).includes(type)) {
       throw new BadRequestException('Invalid document type');
@@ -233,7 +234,7 @@ export class BusinessController {
     @Param('documentId') documentId: string,
     @Body('status') status: 'approve' | 'reject',
     @Body('reason') reason?: string,
-    @Request() req: RequestWithUser,
+    @NestRequest() req: RequestWithUser,
   ) {
     return this.businessService.verifyDocument(documentId, req.user.id, status, reason);
   }
@@ -302,7 +303,7 @@ export class BusinessController {
   async suspendBusiness(
     @Param('id') id: string,
     @Body('reason') reason: string,
-    @Request() req: RequestWithUser,
+    @NestRequest() req: RequestWithUser,
   ) {
     const business = await this.businessService.findOne(id);
     if (business.status === BusinessStatus.SUSPENDED) {
@@ -323,7 +324,7 @@ export class BusinessController {
   @ApiResponse({ status: 404, description: 'Business not found' })
   async activateBusiness(
     @Param('id') id: string,
-    @Request() req: RequestWithUser,
+    @NestRequest() req: RequestWithUser,
   ) {
     const business = await this.businessService.findOne(id);
     if (business.status !== BusinessStatus.SUSPENDED) {

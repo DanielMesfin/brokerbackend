@@ -1,56 +1,70 @@
 // src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { 
-    cors: true,
-    logger: ['error', 'warn', 'log']
-  });
+  const logger = new Logger('Bootstrap');
   
-  // Security middlewares
-  app.use(helmet());
-  app.useGlobalPipes(new ValidationPipe({ 
-    whitelist: true, 
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-  }));
-  
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-  });
-  app.use(limiter);
-
-  // Initialize Swagger
-  const options = new DocumentBuilder()
-    .setTitle('Social Media API')
-    .setDescription('The social media API documentation')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
   try {
-    const document = SwaggerModule.createDocument(app, options);
+    const app = await NestFactory.create(AppModule, { 
+      cors: true,
+      logger: ['error', 'warn', 'log']
+    });
+
+    // Enable Prisma shutdown hooks
+    const prismaService = app.get(PrismaService);
+    await prismaService.enableShutdownHooks(app);
+    
+    // Security middlewares
+    app.use(helmet());
+    
+    // Rate limiting
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // limit each IP to 100 requests per windowMs
+    });
+    app.use(limiter);
+
+    // Global validation pipe
+    app.useGlobalPipes(new ValidationPipe({ 
+      whitelist: true, 
+      transform: true,
+      forbidNonWhitelisted: true,
+    }));
+
+    // Swagger configuration
+    const config = new DocumentBuilder()
+      .setTitle('Social Media API')
+      .setDescription('The social media API documentation')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document, {
       swaggerOptions: {
         persistAuthorization: true,
       },
     });
-    console.log('Swagger UI available at: http://localhost:' + (process.env.PORT || 8888) + '/api');
-  } catch (err) {
-    console.error('Swagger initialization error:', err);
-  }
 
-  const port = process.env.PORT || 8888;
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+    const port = process.env.PORT || 8888;
+    await app.listen(port);
+    
+    logger.log(`Application is running on: http://localhost:${port}`);
+    logger.log(`Swagger UI available at: http://localhost:${port}/api`);
+    
+  } catch (error) {
+    logger.error('Error during application startup', error);
+    process.exit(1);
+  }
 }
 
-bootstrap();
+bootstrap().catch(error => {
+  console.error('Fatal error during application startup:', error);
+  process.exit(1);
+});

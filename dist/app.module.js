@@ -26,6 +26,7 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: '.env',
+                expandVariables: true,
             }),
             prisma_module_1.PrismaModule,
             (0, common_1.forwardRef)(() => auth_module_1.AuthModule),
@@ -34,10 +35,11 @@ exports.AppModule = AppModule = __decorate([
             marketing_sales_module_1.MarketingSalesModule,
             erp_crm_module_1.ErpCrmModule,
             social_links_module_1.SocialLinksModule,
-            ai_agent_module_1.AiAgentModule
+            ai_agent_module_1.AiAgentModule,
         ],
         controllers: [],
         providers: [],
+        exports: [],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map
