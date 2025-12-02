@@ -74,7 +74,7 @@ __decorate([
         description: 'Commission rate for the listing (if applicable)',
         nullable: true
     }),
-    __metadata("design:type", Number)
+    __metadata("design:type", Object)
 ], Listing.prototype, "commissionRate", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
@@ -89,7 +89,7 @@ __decorate([
         description: 'Comma-separated URLs of listing images',
         nullable: true
     }),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], Listing.prototype, "imageUrls", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'ID of the user who created the listing' }),
