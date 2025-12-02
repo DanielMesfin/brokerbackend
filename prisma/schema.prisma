@@ -45,6 +45,8 @@ model User {
   buyerDraftOrders    DraftOrder[]       @relation("BuyerDraftOrders")
   sellerDraftOrders   DraftOrder[]       @relation("SellerDraftOrders")
   verificationCodes   VerificationCode[]
+  verifiedVerifications BusinessVerification[] @relation("VerifiedByUser")
+  acceptedCompliances  BusinessCompliance[]    @relation("AcceptedByUser")
 }
 
 model UserProfile {
@@ -110,21 +112,92 @@ model Post {
 }
 
 model Business {
-  id          String           @id @default(uuid())
-  name        String
-  description String?
-  logo        String?
-  website     String?
-  industry    String?
-  size        String? // e.g., '1-10', '11-50', '51-200', '201-500', '500+'
-  isVerified  Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  members     BusinessMember[]
-  listings    Listing[]
+  id           String               @id @default(uuid())
+  name         String
+  description  String?
+  logo         String?
+  website      String?
+  industry     String?
+  size         String? // e.g., '1-10', '11-50', '51-200', '201-500', '500+'
+  isVerified   Boolean              @default(false)
+  taxId        String?
+  registrationNumber String?
+  country      String?
+  address      String?
+  city         String?
+  state        String?
+  postalCode   String?
+  phone        String?
+  email        String?
+  status       String              @default("PENDING") // PENDING, ACTIVE, SUSPENDED
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  members      BusinessMember[]
+  listings     Listing[]
+  documents    BusinessDocument[]
+  verifications BusinessVerification[]
+  compliances  BusinessCompliance[]
 
   @@index([name])
   @@index([industry])
+  @@index([status])
+  @@index([taxId])
+  @@index([registrationNumber])
+}
+
+model BusinessVerification {
+  id           String    @id @default(uuid())
+  businessId   String
+  type         String    // TAX_ID, REGISTRATION, BANK_ACCOUNT, etc.
+  status       String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  documentUrl  String?
+  verifiedAt   DateTime?
+  verifiedById String?
+  notes        String?
+  metadata     String?   // JSON string for additional data
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  business     Business  @relation(fields: [businessId], references: [id])
+  verifiedBy   User?     @relation("VerifiedByUser", fields: [verifiedById], references: [id])
+
+  @@index([businessId])
+  @@index([status])
+  @@index([type])
+}
+
+model BusinessCompliance {
+  id               String    @id @default(uuid())
+  businessId       String
+  policyVersion    String
+  acceptedAt       DateTime  @default(now())
+  acceptedByUserId String
+  ipAddress        String?
+  userAgent        String?
+  business         Business  @relation(fields: [businessId], references: [id])
+  acceptedBy       User      @relation("AcceptedByUser", fields: [acceptedByUserId], references: [id])
+
+  @@index([businessId])
+  @@index([acceptedByUserId])
+}
+
+model BusinessDocument {
+  id          String    @id @default(uuid())
+  businessId  String
+  type        String    // TAX_ID, REGISTRATION, LICENSE, OTHER
+  name        String
+  description String?
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?      // Size in bytes
+  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  metadata    String?   // JSON string for additional data
+  uploadedAt  DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  business    Business  @relation(fields: [businessId], references: [id])
+
+  @@index([businessId])
+  @@index([type])
+  @@index([status])
 }
 
 model BusinessMember {
