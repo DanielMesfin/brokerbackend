@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiHeader, ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, MaxLength, Matches, IsIn } from 'class-validator';
 
-export const USER_ROLES = ['USER', 'ADMIN', 'MODERATOR'] as const;
+export const USER_ROLES = ['USER', 'ADMIN', 'SELLS_AGENT'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
 class RegisterDto {
@@ -93,12 +93,18 @@ class LoginDto {
 
 class AuthResponse {
   accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;
     firstName: string;
     lastName: string; // This will be mapped from secondName in the service
+    phone: string;
     role: string;
+    isActive: boolean;
+    lastLogin?: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   };
 }
 
@@ -174,65 +180,69 @@ export class AuthController {
         description: 'Email, password, first name and last name are required',
         value: {
           email: 'user@example.com',
-          password: 'securePassword123!',
+          password: 'SecurePass123!',
           firstName: 'John',
           lastName: 'Doe'
         }
       },
       full: {
         summary: 'Full registration',
-        description: 'Register with all fields',
+        description: 'All available fields including optional ones',
         value: {
           email: 'user@example.com',
-          password: 'securePassword123!',
+          password: 'SecurePass123!',
           firstName: 'John',
           lastName: 'Doe',
+          phone: '+1234567890',
           role: 'USER'
         }
       }
     }
   })
-  @HttpCode(HttpStatus.CREATED)
-  async register(@Body() body: RegisterDto): Promise<UserResponse> {
-    const user = await this.authService.register(
+  async register(@Body() body: RegisterDto): Promise<AuthResponse> {
+    const result = await this.authService.register(
       body.email, 
       body.password, 
       body.firstName, 
-      body.lastName, // This will be mapped to secondName in the service
+      body.lastName,
+      body.phone,
       body.role
     );
-    return { 
-      id: user.id, 
-      email: user.email, 
-      firstName: user.firstName || '',
-      lastName: user.secondName || '', // Map secondName back to lastName for the response
-      role: user.role 
-    };
+
+    return result;
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
   @ApiOperation({ summary: 'User login' })
-  @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponse })
-  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid credentials' })
-  @ApiBody({ 
-    type: LoginDto,
-    examples: {
-      user: {
-        summary: 'User Login',
-        value: {
-          email: 'user@example.com',
-          password: 'securePassword123!'
-        }
-      }
-    }
-  })
+  @ApiResponse({ status: 200, description: 'User successfully logged in', type: AuthResponse })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiBody({ type: LoginDto })
   async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
+    
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or password');
     }
-    return this.authService.login(user);
+
+    // Generate tokens
+    const tokens = await this.authService.getTokens(user.id, user.email, user.role);
+    
+    // Update refresh token in database
+    await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.secondName || '',
+        phone: user.phone || '',
+        role: user.role,
+        isActive: user.isActive
+      }
+    };
   }
 
   @Get('me')

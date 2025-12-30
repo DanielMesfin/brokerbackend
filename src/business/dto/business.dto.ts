@@ -152,6 +152,16 @@ export class UpdateBusinessDto {
   @IsEnum(BusinessStatus)
   @IsOptional()
   status?: BusinessStatus;
+
+  @ApiPropertyOptional({ description: 'Reason for suspension' })
+  @IsString()
+  @IsOptional()
+  suspensionReason?: string;
+
+  @ApiPropertyOptional({ description: 'Suspension timestamp', type: 'string', format: 'date-time' })
+  @IsDateString()
+  @IsOptional()
+  suspendedAt?: Date;
 }
 
 export class BusinessDocumentDto {
@@ -390,6 +400,13 @@ export class BusinessResponseDto {
 
   @ApiProperty({ description: 'Last update timestamp', type: 'string', format: 'date-time' })
   updatedAt: Date;
+}
+
+export class SuspendBusinessDto {
+  @ApiProperty({ description: 'Reason for suspension' })
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
 }
 
 export class BusinessQueryDto {

@@ -166,11 +166,13 @@ export class BusinessService {
   async update(id: string, updateBusinessDto: UpdateBusinessDto, userId: string): Promise<Business> {
     const business = await this.findOne(id);
     
-    // Handle suspension status
+    // Handle status changes
     if ('status' in updateBusinessDto) {
       if (updateBusinessDto.status === BusinessStatus.SUSPENDED) {
         business.status = BusinessStatus.SUSPENDED;
-        business.suspensionReason = (updateBusinessDto as any).suspensionReason || 'Business suspended';
+        // Cast to any to access potential custom fields
+        const dto = updateBusinessDto as any;
+        business.suspensionReason = dto.suspensionReason || 'Business suspended';
         business.suspendedAt = new Date();
       } else if (business.status === BusinessStatus.SUSPENDED && updateBusinessDto.status === BusinessStatus.VERIFIED) {
         // Reactivating a suspended business
@@ -183,7 +185,7 @@ export class BusinessService {
     }
     
     // Update other fields
-    const { status, verification, compliance, suspensionReason, suspendedAt, ...safeUpdates } = updateBusinessDto;
+    const { status, verification, compliance, ...safeUpdates } = updateBusinessDto;
     Object.assign(business, safeUpdates);
     
     business.updatedBy = userId;
@@ -223,7 +225,7 @@ export class BusinessService {
     const savedDocument = await this.documentRepository.save(document);
     
     // Update compliance requirements if this document satisfies any
-    await this.updateComplianceRequirements(businessId, documentType);
+    await this.addComplianceRequirement(businessId, documentType);
     
     return savedDocument;
   }
@@ -240,7 +242,7 @@ export class BusinessService {
 
     if (status === 'approve') {
       document.status = DocumentStatus.APPROVED;
-      document.rejectionReason = null;
+      document.rejectionReason = undefined;
     } else {
       document.status = DocumentStatus.REJECTED;
       document.rejectionReason = reason || 'Document rejected';
@@ -257,11 +259,29 @@ export class BusinessService {
     return updatedDoc;
   }
 
-  private async updateComplianceStatus(businessId: string): Promise<void> {
+  async updateComplianceStatus(businessId: string): Promise<BusinessCompliance> {
     const business = await this.findOne(businessId);
-    const compliance = business.compliance;
+    let compliance = business.compliance;
     
-    // Update compliance status based on requirements
+    if (!compliance) {
+      compliance = this.complianceRepository.create({
+        businessId,
+        status: ComplianceStatus.NON_COMPLIANT,
+        complianceScore: 0,
+        requirements: this.getDefaultComplianceRequirements(),
+        settings: {},
+        history: [],
+        riskFactors: {
+          highRiskDocuments: [],
+          expiredDocuments: [],
+          missingDocuments: [],
+          pendingVerification: []
+        },
+        lastComplianceCheck: new Date()
+      });
+      return this.complianceRepository.save(compliance);
+    }
+
     const requirements = compliance.requirements || [];
     const totalRequirements = requirements.length;
     const completedRequirements = requirements.filter(r => r.status === ComplianceRequirementStatus.VERIFIED).length;
@@ -270,8 +290,11 @@ export class BusinessService {
     const complianceScore = totalRequirements > 0 
       ? Math.round((completedRequirements / totalRequirements) * 100) 
       : 0;
+
+    // Update compliance entity
+    compliance.complianceScore = complianceScore;
     
-    // Update compliance status based on score
+    // Update status based on score
     let newStatus = compliance.status;
     if (complianceScore === 100) {
       newStatus = ComplianceStatus.COMPLIANT;

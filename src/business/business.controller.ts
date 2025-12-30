@@ -204,9 +204,9 @@ export class BusinessController {
       }),
     ) file: Express.Multer.File,
     @Body('type') type: DocumentType,
+    @NestRequest() req: RequestWithUser,
     @Body('issueDate') issueDate?: string,
     @Body('expiryDate') expiryDate?: string,
-    @NestRequest() req: RequestWithUser,
   ): Promise<DocumentUploadResponseDto> {
     if (!Object.values(DocumentType).includes(type)) {
       throw new BadRequestException('Invalid document type');
@@ -232,9 +232,9 @@ export class BusinessController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async verifyDocument(
     @Param('documentId') documentId: string,
+    @NestRequest() req: RequestWithUser,
     @Body('status') status: 'approve' | 'reject',
     @Body('reason') reason?: string,
-    @NestRequest() req: RequestWithUser,
   ) {
     return this.businessService.verifyDocument(documentId, req.user.id, status, reason);
   }
@@ -247,8 +247,8 @@ export class BusinessController {
   async verifyBusiness(
     @Param('id') id: string,
     @Body('status') status: 'approve' | 'reject',
-    @Body('reason') reason?: string,
-    @NestRequest() req: RequestWithUser,
+    @Body('reason') reason: string,
+    @NestRequest() req: RequestWithUser
   ) {
     return this.businessService.verifyBusiness(id, req.user.id, status, reason);
   }
@@ -333,8 +333,8 @@ export class BusinessController {
 
     return this.businessService.update(id, { 
       status: BusinessStatus.VERIFIED,
-      suspensionReason: null,
-      suspendedAt: null,
+      suspensionReason: undefined,
+      suspendedAt: undefined,
     }, req.user.id);
   }
 }

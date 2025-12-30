@@ -1,25 +1,45 @@
 import { DocumentBuilder } from '@nestjs/swagger';
 
 export const swaggerConfig = new DocumentBuilder()
-  .setTitle('Social Media API')
+  .setTitle('Business Collaboration Platform API')
   .setDescription(`
-  # Social Media API Documentation
+  # Business Collaboration Platform API Documentation
 
-  Welcome to the Social Media API documentation. This API provides endpoints for:
-  - User authentication and authorization
-  - Post management
-  - Comments and interactions
-  - User profiles and relationships
-  - Marketing and sales management (listings, transactions)
-  - ERP/CRM system for B2B operations (customers, orders, invoicing)
+  Welcome to the Business Collaboration Platform API. This API provides endpoints for:
+  - User authentication and authorization (including OAuth2 with Google and Facebook)
+  - Business profile management
+  - Promotion and campaign management
+  - User engagement and social features
+  - Business collaboration tools
+  - Regulatory compliance management
 
   ## Authentication
-  Most endpoints require authentication. Use the \`/auth/login\` endpoint to get a JWT token, then click the **Authorize** button above and enter your token.
+  The API supports multiple authentication methods:
+  - JWT Bearer token (for API access)
+  - OAuth2 with Google
+  - OAuth2 with Facebook
+  - API Key for external services
+
+  For JWT authentication, use the \`/auth/login\` endpoint to get a token, then click the **Authorize** button above and enter your token.
 
   ## Rate Limiting
-  The API is rate limited to 100 requests per 15 minutes per IP address.
+  The API is rate limited to 1000 requests per 15 minutes per IP address for authenticated users.
   `)
-  .setVersion('1.0')
+  .setVersion('2.0')
+  .addOAuth2({
+    type: 'oauth2',
+    description: 'OAuth2 authentication with Google',
+    name: 'Google OAuth2',
+    flows: {
+      implicit: {
+        authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+        scopes: {
+          'https://www.googleapis.com/auth/userinfo.profile': 'View your basic profile info',
+          'https://www.googleapis.com/auth/userinfo.email': 'View your email address',
+        },
+      },
+    },
+  })
   .addBearerAuth(
     {
       type: 'http',
@@ -42,12 +62,28 @@ export const swaggerConfig = new DocumentBuilder()
   )
   .addServer('http://localhost:8888', 'Development Server')
   .addServer('https://api.yourdomain.com', 'Production Server')
+  
+  // Authentication & User Management
   .addTag('Authentication', 'User authentication and registration')
   .addTag('Users', 'User management and profiles')
-  .addTag('Posts', 'Post management')
+  .addTag('Sessions', 'User session management')
+  .addTag('Accounts', 'Linked OAuth accounts')
+  
+  // Business Features
+  .addTag('Business', 'Business profile management')
+  .addTag('Promotions', 'Promotion management')
+  .addTag('Campaigns', 'Marketing campaigns')
+  
+  // Social & Engagement
+  .addTag('Posts', 'Content posts')
   .addTag('Comments', 'Comments on posts')
-  .addTag('Likes', 'Post likes management')
-  .addTag('marketing-sales', 'Marketing and sales management')
+  .addTag('Likes', 'Engagement metrics')
+  .addTag('Connections', 'User connections and networking')
+  
+  // Compliance & Administration
+  .addTag('Regulations', 'Regulatory information')
+  .addTag('Compliance', 'Compliance management')
+  .addTag('Verification', 'User and business verification')
   .addTag('erp-crm', 'ERP/CRM System for B2B operations')
   .setContact(
     'Support',

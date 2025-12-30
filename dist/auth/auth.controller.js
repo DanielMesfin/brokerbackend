@@ -18,7 +18,7 @@ const auth_service_1 = require("./auth.service");
 const jwt_1 = require("@nestjs/jwt");
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
-exports.USER_ROLES = ['USER', 'ADMIN', 'MODERATOR'];
+exports.USER_ROLES = ['USER', 'ADMIN', 'SELLS_AGENT'];
 class RegisterDto {
 }
 __decorate([
@@ -121,21 +121,28 @@ let AuthController = class AuthController {
         this.jwtService = jwtService;
     }
     async register(body) {
-        const user = await this.authService.register(body.email, body.password, body.firstName, body.lastName, body.role);
-        return {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName || '',
-            lastName: user.secondName || '',
-            role: user.role
-        };
+        const result = await this.authService.register(body.email, body.password, body.firstName, body.lastName, body.phone, body.role);
+        return result;
     }
     async login(body) {
         const user = await this.authService.validateUser(body.email, body.password);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('Invalid email or password');
         }
-        return this.authService.login(user);
+        const tokens = await this.authService.getTokens(user.id, user.email, user.role);
+        await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
+        return {
+            ...tokens,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName || '',
+                lastName: user.secondName || '',
+                phone: user.phone || '',
+                role: user.role,
+                isActive: user.isActive
+            }
+        };
     }
     async me(auth) {
         if (!auth) {
@@ -209,25 +216,25 @@ __decorate([
                 description: 'Email, password, first name and last name are required',
                 value: {
                     email: 'user@example.com',
-                    password: 'securePassword123!',
+                    password: 'SecurePass123!',
                     firstName: 'John',
                     lastName: 'Doe'
                 }
             },
             full: {
                 summary: 'Full registration',
-                description: 'Register with all fields',
+                description: 'All available fields including optional ones',
                 value: {
                     email: 'user@example.com',
-                    password: 'securePassword123!',
+                    password: 'SecurePass123!',
                     firstName: 'John',
                     lastName: 'Doe',
+                    phone: '+1234567890',
                     role: 'USER'
                 }
             }
         }
     }),
-    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [RegisterDto]),
@@ -237,20 +244,9 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, common_1.Post)('login'),
     (0, swagger_1.ApiOperation)({ summary: 'User login' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Login successful', type: AuthResponse }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized - Invalid credentials' }),
-    (0, swagger_1.ApiBody)({
-        type: LoginDto,
-        examples: {
-            user: {
-                summary: 'User Login',
-                value: {
-                    email: 'user@example.com',
-                    password: 'securePassword123!'
-                }
-            }
-        }
-    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User successfully logged in', type: AuthResponse }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
+    (0, swagger_1.ApiBody)({ type: LoginDto }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [LoginDto]),

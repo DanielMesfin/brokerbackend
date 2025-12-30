@@ -106,7 +106,13 @@ export class Business {
   createdBy: string;
 
   @Column({ type: 'uuid', nullable: true })
-  updatedBy: string;
+  updatedBy: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  suspensionReason: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  suspendedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

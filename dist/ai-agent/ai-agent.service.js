@@ -25,6 +25,11 @@ let AiAgentService = class AiAgentService {
                 sellerUserId: (_c = params.sellerUserId) !== null && _c !== void 0 ? _c : null,
                 status: 'OPEN',
             },
+            include: {
+                messages: true,
+                draftOrders: true,
+                agentRuns: true,
+            },
         });
         if (params.initialText) {
             await this.prisma.message.create({
@@ -35,8 +40,9 @@ let AiAgentService = class AiAgentService {
                 },
             });
             await this.generateAgentReply(convo.id, params.initialText);
+            return this.getConversation(convo.id);
         }
-        return this.getConversation(convo.id);
+        return this.mapToConversationDto(convo);
     }
     async addUserMessageAndRespond(conversationId, userId, text) {
         const convo = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
@@ -48,17 +54,47 @@ let AiAgentService = class AiAgentService {
         await this.generateAgentReply(conversationId, text);
         return this.getConversation(conversationId);
     }
+    mapToConversationDto(convo) {
+        return {
+            id: convo.id,
+            listingId: convo.listingId,
+            buyerUserId: convo.buyerUserId,
+            sellerUserId: convo.sellerUserId,
+            status: convo.status,
+            createdAt: convo.createdAt,
+            updatedAt: convo.updatedAt,
+            messages: convo.messages || [],
+            agentRuns: convo.agentRuns || [],
+            draftOrders: (convo.draftOrders || []).map((order) => {
+                var _a, _b;
+                return ({
+                    id: order.id,
+                    conversationId: order.conversationId,
+                    listingId: order.listingId,
+                    buyerUserId: order.buyerUserId,
+                    sellerUserId: order.sellerUserId,
+                    quantity: order.quantity,
+                    priceAgreed: (_a = order.priceAgreed) !== null && _a !== void 0 ? _a : undefined,
+                    status: order.status,
+                    shippingInfo: (_b = order.shippingInfo) !== null && _b !== void 0 ? _b : undefined,
+                    createdAt: order.createdAt,
+                    updatedAt: order.updatedAt
+                });
+            })
+        };
+    }
     async getConversation(conversationId) {
         const convo = await this.prisma.conversation.findUnique({
             where: { id: conversationId },
             include: {
                 messages: { orderBy: { createdAt: 'asc' } },
                 draftOrders: true,
+                agentRuns: true,
             },
         });
         if (!convo)
             throw new common_1.NotFoundException('Conversation not found');
-        return convo;
+        return this.mapToConversationDto(convo);
     }
     async adminDecision(conversationId, adminUserId, status, notes) {
         const convo = await this.prisma.conversation.findUnique({ where: { id: conversationId } });

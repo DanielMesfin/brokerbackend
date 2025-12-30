@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConversationResponseDto } from './dto/conversation-response.dto';
 
 @Injectable()
 export class AiAgentService {
@@ -10,13 +11,18 @@ export class AiAgentService {
     buyerUserId?: string;
     sellerUserId?: string;
     initialText?: string;
-  }) {
+  }): Promise<ConversationResponseDto> {
     const convo = await this.prisma.conversation.create({
       data: {
         listingId: params.listingId ?? null,
         buyerUserId: params.buyerUserId ?? null,
         sellerUserId: params.sellerUserId ?? null,
         status: 'OPEN',
+      },
+      include: {
+        messages: true,
+        draftOrders: true,
+        agentRuns: true,
       },
     });
 
@@ -29,12 +35,15 @@ export class AiAgentService {
         },
       });
       await this.generateAgentReply(convo.id, params.initialText);
+      
+      // Refresh the conversation to include the new message and agent run
+      return this.getConversation(convo.id);
     }
 
-    return this.getConversation(convo.id);
+    return this.mapToConversationDto(convo);
   }
 
-  async addUserMessageAndRespond(conversationId: string, userId: string, text: string) {
+  async addUserMessageAndRespond(conversationId: string, userId: string, text: string): Promise<ConversationResponseDto> {
     const convo = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!convo) throw new NotFoundException('Conversation not found');
 
@@ -47,19 +56,47 @@ export class AiAgentService {
     return this.getConversation(conversationId);
   }
 
-  async getConversation(conversationId: string) {
+  private mapToConversationDto(convo: any): ConversationResponseDto {
+    return {
+      id: convo.id,
+      listingId: convo.listingId,
+      buyerUserId: convo.buyerUserId,
+      sellerUserId: convo.sellerUserId,
+      status: convo.status,
+      createdAt: convo.createdAt,
+      updatedAt: convo.updatedAt,
+      messages: convo.messages || [],
+      agentRuns: convo.agentRuns || [],
+      draftOrders: (convo.draftOrders || []).map((order: any) => ({
+        id: order.id,
+        conversationId: order.conversationId,
+        listingId: order.listingId,
+        buyerUserId: order.buyerUserId,
+        sellerUserId: order.sellerUserId,
+        quantity: order.quantity,
+        priceAgreed: order.priceAgreed ?? undefined,
+        status: order.status,
+        shippingInfo: order.shippingInfo ?? undefined,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
+    };
+  }
+
+  async getConversation(conversationId: string): Promise<ConversationResponseDto> {
     const convo = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
         messages: { orderBy: { createdAt: 'asc' } },
         draftOrders: true,
+        agentRuns: true,
       },
     });
     if (!convo) throw new NotFoundException('Conversation not found');
-    return convo;
+    return this.mapToConversationDto(convo);
   }
 
-  async adminDecision(conversationId: string, adminUserId: string, status: 'APPROVED' | 'REJECTED', notes?: string) {
+  async adminDecision(conversationId: string, adminUserId: string, status: 'APPROVED' | 'REJECTED', notes?: string): Promise<ConversationResponseDto> {
     const convo = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!convo) throw new NotFoundException('Conversation not found');
 

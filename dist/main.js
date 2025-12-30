@@ -14,8 +14,13 @@ async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
     try {
         const app = await core_1.NestFactory.create(app_module_1.AppModule, {
-            cors: true,
             logger: ['error', 'warn', 'log']
+        });
+        app.enableCors({
+            origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+            methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+            credentials: true,
+            allowedHeaders: 'Content-Type, Accept, Authorization',
         });
         const prismaService = app.get(prisma_service_1.PrismaService);
         await prismaService.enableShutdownHooks(app);

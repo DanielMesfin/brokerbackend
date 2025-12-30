@@ -55,10 +55,12 @@ let BusinessController = class BusinessController {
         }));
     }
     getComplianceStatuses() {
-        return Object.entries(business_compliance_entity_1.ComplianceStatus).map(([key, value]) => (key !== 'COMPLIANCE_STATUS' && {
-            value,
+        return Object.entries(business_compliance_entity_1.ComplianceStatus)
+            .filter(([key]) => key !== 'COMPLIANCE_STATUS')
+            .map(([key, value]) => ({
+            value: value,
             label: key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' '),
-        })).filter(Boolean);
+        }));
     }
     getDocumentTypes() {
         return Object.entries(business_document_entity_1.DocumentType).map(([key, value]) => ({
@@ -75,7 +77,7 @@ let BusinessController = class BusinessController {
     async remove(id, req) {
         return this.businessService.remove(id, req.user.id);
     }
-    async uploadDocument(id, file, type, issueDate, expiryDate, req) {
+    async uploadDocument(id, file, type, req, issueDate, expiryDate) {
         if (!Object.values(business_document_entity_1.DocumentType).includes(type)) {
             throw new common_1.BadRequestException('Invalid document type');
         }
@@ -86,7 +88,7 @@ let BusinessController = class BusinessController {
             metadata.expiryDate = new Date(expiryDate);
         return this.businessService.addDocument(id, file, type, req.user.id, metadata);
     }
-    async verifyDocument(documentId, status, reason, req) {
+    async verifyDocument(documentId, req, status, reason) {
         return this.businessService.verifyDocument(documentId, req.user.id, status, reason);
     }
     async verifyBusiness(id, status, reason, req) {
@@ -128,8 +130,8 @@ let BusinessController = class BusinessController {
         }
         return this.businessService.update(id, {
             status: business_entity_1.BusinessStatus.VERIFIED,
-            suspensionReason: null,
-            suspendedAt: null,
+            suspensionReason: undefined,
+            suspendedAt: undefined,
         }, req.user.id);
     }
 };
@@ -231,7 +233,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Business deleted successfully' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, Request()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
@@ -279,11 +281,11 @@ __decorate([
         ],
     }))),
     __param(2, (0, common_1.Body)('type')),
-    __param(3, (0, common_1.Body)('issueDate')),
-    __param(4, (0, common_1.Body)('expiryDate')),
-    __param(5, Request()),
+    __param(3, (0, common_1.Request)()),
+    __param(4, (0, common_1.Body)('issueDate')),
+    __param(5, (0, common_1.Body)('expiryDate')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, String, String, String, Object]),
+    __metadata("design:paramtypes", [String, Object, String, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], BusinessController.prototype, "uploadDocument", null);
 __decorate([
@@ -293,11 +295,11 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid input' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Document not found' }),
     __param(0, (0, common_1.Param)('documentId')),
-    __param(1, (0, common_1.Body)('status')),
-    __param(2, (0, common_1.Body)('reason')),
-    __param(3, Request()),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)('status')),
+    __param(3, (0, common_1.Body)('reason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:paramtypes", [String, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], BusinessController.prototype, "verifyDocument", null);
 __decorate([
@@ -362,7 +364,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('reason')),
-    __param(2, Request()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
@@ -374,7 +376,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Business is not suspended' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Business not found' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, Request()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)

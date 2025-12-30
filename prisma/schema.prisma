@@ -2,6 +2,71 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum UserRole {
+  USER
+  SELLS_AGENT
+  ADMIN
+  MODERATOR
+  PREMIUM
+  BUSINESS_OWNER
+  INFLUENCER
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+}
+
+enum PromotionCategory {
+  FOOD
+  FASHION
+  ELECTRONICS
+  BEAUTY
+  HOME
+  SPORTS
+  TRAVEL
+  OTHER
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PREMIUM_SUBSCRIPTION
+  PROMOTION_BOOST
+}
+
+enum CollaborationType {
+  CO_MARKETING
+  TECH_PARTNERSHIP
+  RESOURCE_SHARING
+  EVENT_COLLABORATION
+  CROSS_PROMOTION
+  OTHER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  DELETED
+}
+
+enum KYCBusinessType {
+  INDIVIDUAL
+  SMALL_BUSINESS
+  ENTERPRISE
+  GOVERNMENT
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -19,35 +84,159 @@ model KnowledgeDoc {
   @@index([title])
 }
 
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BusinessProfile {
+  id                 String           @id @default(uuid())
+  businessName       String           @db.VarChar(100)
+  description        String?          @db.Text
+  industry           String           @db.VarChar(100)
+  location           String?          @db.VarChar(100)
+  website            String?          @db.VarChar(255)
+  logoUrl            String?          @db.Text
+  collaborationTypes String?          @db.Text // Store as JSON string
+  goals              String?          @db.Text
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id])
+  promotions         Promotion[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([userId])
+}
+
+model Promotion {
+  id            String           @id @default(uuid())
+  title         String           @db.VarChar(100)
+  description   String?          @db.Text
+  imageUrl      String?          @db.Text
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean          @default(true)
+  maxClaims     Int
+  currentClaims Int              @default(0)
+  pointsCost    Int
+  category      PromotionCategory
+  businessId    String
+  business      BusinessProfile  @relation(fields: [businessId], references: [id])
+  claims        PromotionClaim[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([businessId])
+  @@index([isActive])
+}
+
+model PromotionClaim {
+  id          String    @id @default(uuid())
+  userId      String
+  promotionId String
+  sharedCount Int       @default(0)
+  points      Int       @default(0)
+  claimedAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+
+  @@unique([userId, promotionId])
+}
+
+model Regulation {
+  id          String   @id @default(uuid())
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  content     String   @db.Text
+  category    String   @db.VarChar(100)
+  country     String   @db.VarChar(100)
+  region      String?  @db.VarChar(100)
+  isActive    Boolean  @default(true)
+  version     String   @default("1.0.0") @db.VarChar(20)
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedBy   String?  @db.VarChar(100)
+
+  @@index([category])
+  @@index([country])
+  @@index([isActive])
+}
+
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  passwordHash        String
-  firstName           String?
-  secondName          String?
-  phone               String?
-  role                String               @default("USER")
-  isActive            Boolean              @default(true)
-  lastLogin           DateTime?
-  refreshToken        String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  businesses          BusinessMember[]
-  comments            Comment[]
-  receivedConnections Connection[]         @relation("ReceivedConnections")
-  sentConnections     Connection[]         @relation("SentConnections")
-  buyerConversations  Conversation[]       @relation("BuyerConversations")
-  sellerConversations Conversation[]       @relation("SellerConversations")
-  buyerDraftOrders    DraftOrder[]         @relation("BuyerDraftOrders")
-  sellerDraftOrders   DraftOrder[]         @relation("SellerDraftOrders")
-  likes               Like[]
-  listings            Listing[]
-  posts               Post[]
-  profile             UserProfile?
-  verificationCodes   VerificationCode[]
-  verifiedVerifications VerificationCode[] @relation("VerifiedVerifications")
-  uploadedDocuments   BusinessDocument[]
-  acceptedCompliances BusinessCompliance[] @relation("AcceptedCompliances")
+  id                       String               @id @default(uuid())
+  email                    String               @unique
+  emailVerified            DateTime?
+  firstName                String
+  secondName               String?
+  lastName                 String
+  name                     String?              @db.VarChar(100)
+  username                 String?              @unique @db.VarChar(30)
+  passwordHash             String?
+  phone                    String?
+  bio                      String?              @db.VarChar(500)
+  avatarUrl                String?              @db.Text
+  isActive                 Boolean              @default(true)
+  isVerified               Boolean              @default(false)
+  isEmailVerified          Boolean              @default(false)
+  emailVerificationToken   String?              @db.VarChar(255)
+  emailVerificationExpires DateTime?
+  passwordResetToken       String?              @db.VarChar(255)
+  passwordResetExpires     DateTime?
+  role                     UserRole             @default(USER)
+  authProvider             AuthProvider         @default(EMAIL)
+  premiumUntil             DateTime?
+  points                   Int                  @default(0)
+  referralCode             String
+  lastLogin                DateTime?
+  refreshToken             String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  
+  // Relations
+  accounts                 Account[]
+  sessions                 Session[]
+  campaignsCreated         Campaign[]           @relation("CampaignsCreated")
+  campaignMemberships       CampaignCollaborator[] @relation("CampaignMemberships")
+  businesses               BusinessMember[]
+  comments                 Comment[]
+  receivedConnections       Connection[]         @relation("ReceivedConnections")
+  sentConnections          Connection[]         @relation("SentConnections")
+  buyerConversations        Conversation[]       @relation("BuyerConversations")
+  sellerConversations       Conversation[]       @relation("SellerConversations")
+  buyerDraftOrders         DraftOrder[]         @relation("BuyerDraftOrders")
+  sellerDraftOrders        DraftOrder[]         @relation("SellerDraftOrders")
+  likes                    Like[]
+  listings                 Listing[]
+  posts                    Post[]
+  profile                  UserProfile?
+  verificationCodes        VerificationCode[]
+  verifiedVerifications    VerificationCode[]   @relation("VerifiedVerifications")
+  uploadedDocuments        BusinessDocument[]
+  acceptedCompliances      BusinessCompliance[] @relation("AcceptedCompliances")
+  businessProfile          BusinessProfile?
+  promotionClaims          PromotionClaim[]
 }
 
 model UserProfile {
@@ -141,6 +330,7 @@ model Business {
   documents     BusinessDocument[]
   verifications VerificationCode[]
   compliances   BusinessCompliance[] @relation("BusinessCompliances")
+  campaigns     Campaign[]           @relation("BusinessCampaigns")
 
   @@index([name])
   @@index([industry])
@@ -213,14 +403,16 @@ model Connection {
 }
 
 model Listing {
-  id             String               @id @default(uuid())
-  title          String
-  description    String
-  type           String
-  price          Float
-  category       String
-  tags           String
-  commissionRate Float?
+  id                 String               @id @default(uuid())
+  title              String
+  description        String
+  type               String
+  price              Float
+  category           String
+  tags               String
+  commissionRate     Float?
+  isForCollaboration Boolean              @default(false)
+  campaignProducts   CampaignProduct[]
   isNegotiable   Boolean              @default(false)
   imageUrls      String?
   userId         String?
@@ -351,6 +543,63 @@ model AgentRun {
 }
 
 /// A draft order created by the agent pending confirmation
+model Campaign {
+  id              String                 @id @default(uuid())
+  name            String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  status          String                 @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  budget          Float?
+  targetAudience  String?
+  createdById     String
+  businessId      String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  
+  // Relations
+  createdBy       User                   @relation("CampaignsCreated", fields: [createdById], references: [id])
+  business        Business?              @relation("BusinessCampaigns", fields: [businessId], references: [id])
+  products        CampaignProduct[]
+  collaborators   CampaignCollaborator[]
+  
+  @@index([createdById])
+  @@index([businessId])
+  @@index([status])
+}
+
+model CampaignProduct {
+  id             String   @id @default(uuid())
+  campaignId     String
+  productId      String
+  commissionRate Float?
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  campaign       Campaign @relation(fields: [campaignId], references: [id])
+  product        Listing  @relation(fields: [productId], references: [id])
+  
+  @@unique([campaignId, productId])
+}
+
+model CampaignCollaborator {
+  id         String   @id @default(uuid())
+  campaignId String
+  userId     String
+  role       String   // OWNER, MANAGER, CONTRIBUTOR
+  status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  joinedAt   DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  user       User     @relation("CampaignMemberships", fields: [userId], references: [id])
+  
+  @@unique([campaignId, userId])
+}
+
 model DraftOrder {
   id             String       @id @default(uuid())
   conversationId String

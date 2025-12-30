@@ -10,9 +10,12 @@ exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const config_1 = require("@nestjs/config");
 const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
+const oauth2_controller_1 = require("./oauth2.controller");
 const jwt_strategy_1 = require("./jwt.strategy");
+const google_oauth2_strategy_1 = require("./strategies/google-oauth2.strategy");
 const prisma_module_1 = require("../prisma/prisma.module");
 const auth_guard_1 = require("./auth.guard");
 const jwt_auth_guard_1 = require("./jwt-auth.guard");
@@ -23,10 +26,13 @@ exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
             (0, common_1.forwardRef)(() => prisma_module_1.PrismaModule),
-            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
+            config_1.ConfigModule,
+            passport_1.PassportModule.register({ defaultStrategy: ['jwt', 'google', 'facebook'] }),
             jwt_1.JwtModule.registerAsync({
-                useFactory: () => ({
-                    secret: process.env.JWT_SECRET || 'dev-secret',
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET') || 'dev-secret',
                     signOptions: { expiresIn: '7d' },
                 }),
             }),
@@ -38,10 +44,11 @@ exports.AuthModule = AuthModule = __decorate([
             },
             auth_service_1.AuthService,
             jwt_strategy_1.JwtStrategy,
+            google_oauth2_strategy_1.GoogleOAuth2Strategy,
             auth_guard_1.JwtPrismaGuard,
             jwt_auth_guard_1.JwtAuthGuard
         ],
-        controllers: [auth_controller_1.AuthController],
+        controllers: [auth_controller_1.AuthController, oauth2_controller_1.OAuth2Controller],
         exports: ['AUTH_SERVICE', jwt_auth_guard_1.JwtAuthGuard]
     })
 ], AuthModule);

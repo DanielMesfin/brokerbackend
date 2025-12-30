@@ -118,6 +118,22 @@ let BusinessService = class BusinessService {
     }
     async update(id, updateBusinessDto, userId) {
         const business = await this.findOne(id);
+        if ('status' in updateBusinessDto) {
+            if (updateBusinessDto.status === business_entity_1.BusinessStatus.SUSPENDED) {
+                business.status = business_entity_1.BusinessStatus.SUSPENDED;
+                const dto = updateBusinessDto;
+                business.suspensionReason = dto.suspensionReason || 'Business suspended';
+                business.suspendedAt = new Date();
+            }
+            else if (business.status === business_entity_1.BusinessStatus.SUSPENDED && updateBusinessDto.status === business_entity_1.BusinessStatus.VERIFIED) {
+                business.status = business_entity_1.BusinessStatus.VERIFIED;
+                business.suspensionReason = null;
+                business.suspendedAt = null;
+            }
+            else {
+                business.status = updateBusinessDto.status;
+            }
+        }
         const { status, verification, compliance, ...safeUpdates } = updateBusinessDto;
         Object.assign(business, safeUpdates);
         business.updatedBy = userId;
@@ -143,7 +159,7 @@ let BusinessService = class BusinessService {
             uploadedBy: userId,
         });
         const savedDocument = await this.documentRepository.save(document);
-        await this.updateComplianceRequirements(businessId, documentType);
+        await this.addComplianceRequirement(businessId, documentType);
         return savedDocument;
     }
     async verifyDocument(documentId, userId, status, reason) {
@@ -156,7 +172,7 @@ let BusinessService = class BusinessService {
         }
         if (status === 'approve') {
             document.status = business_document_entity_1.DocumentStatus.APPROVED;
-            document.rejectionReason = null;
+            document.rejectionReason = undefined;
         }
         else {
             document.status = business_document_entity_1.DocumentStatus.REJECTED;
@@ -167,6 +183,50 @@ let BusinessService = class BusinessService {
         const updatedDoc = await this.documentRepository.save(document);
         await this.updateComplianceStatus(document.businessId);
         return updatedDoc;
+    }
+    async updateComplianceStatus(businessId) {
+        const business = await this.findOne(businessId);
+        let compliance = business.compliance;
+        if (!compliance) {
+            compliance = this.complianceRepository.create({
+                businessId,
+                status: business_compliance_entity_1.ComplianceStatus.NON_COMPLIANT,
+                complianceScore: 0,
+                requirements: this.getDefaultComplianceRequirements(),
+                settings: {},
+                history: [],
+                riskFactors: {
+                    highRiskDocuments: [],
+                    expiredDocuments: [],
+                    missingDocuments: [],
+                    pendingVerification: []
+                },
+                lastComplianceCheck: new Date()
+            });
+            return this.complianceRepository.save(compliance);
+        }
+        const requirements = compliance.requirements || [];
+        const totalRequirements = requirements.length;
+        const completedRequirements = requirements.filter(r => r.status === business_compliance_entity_1.ComplianceRequirementStatus.VERIFIED).length;
+        const complianceScore = totalRequirements > 0
+            ? Math.round((completedRequirements / totalRequirements) * 100)
+            : 0;
+        compliance.complianceScore = complianceScore;
+        let newStatus = compliance.status;
+        if (complianceScore === 100) {
+            newStatus = business_compliance_entity_1.ComplianceStatus.COMPLIANT;
+        }
+        else if (complianceScore >= 70) {
+            newStatus = business_compliance_entity_1.ComplianceStatus.AT_RISK;
+        }
+        else {
+            newStatus = business_compliance_entity_1.ComplianceStatus.NON_COMPLIANT;
+        }
+        if (complianceScore !== compliance.complianceScore || newStatus !== compliance.status) {
+            compliance.complianceScore = complianceScore;
+            compliance.status = newStatus;
+            await this.complianceRepository.save(compliance);
+        }
     }
     async verifyBusiness(businessId, userId, status, reason, method = business_verification_entity_1.VerificationMethod.MANUAL) {
         const business = await this.findOne(businessId);

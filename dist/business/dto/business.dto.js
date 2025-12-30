@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ComplianceRequirementUpdateDto = exports.DocumentUploadResponseDto = exports.BusinessStatsResponseDto = exports.BusinessQueryDto = exports.BusinessResponseDto = exports.BusinessComplianceDto = exports.ComplianceRequirementDto = exports.BusinessVerificationDto = exports.BusinessDocumentDto = exports.UpdateBusinessDto = exports.CreateBusinessDto = void 0;
+exports.ComplianceRequirementUpdateDto = exports.DocumentUploadResponseDto = exports.BusinessStatsResponseDto = exports.BusinessQueryDto = exports.SuspendBusinessDto = exports.BusinessResponseDto = exports.BusinessComplianceDto = exports.ComplianceRequirementDto = exports.BusinessVerificationDto = exports.BusinessDocumentDto = exports.UpdateBusinessDto = exports.CreateBusinessDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
@@ -196,6 +196,18 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateBusinessDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Reason for suspension' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateBusinessDto.prototype, "suspensionReason", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Suspension timestamp', type: 'string', format: 'date-time' }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Date)
+], UpdateBusinessDto.prototype, "suspendedAt", void 0);
 class BusinessDocumentDto {
 }
 exports.BusinessDocumentDto = BusinessDocumentDto;
@@ -474,6 +486,15 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Last update timestamp', type: 'string', format: 'date-time' }),
     __metadata("design:type", Date)
 ], BusinessResponseDto.prototype, "updatedAt", void 0);
+class SuspendBusinessDto {
+}
+exports.SuspendBusinessDto = SuspendBusinessDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Reason for suspension' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SuspendBusinessDto.prototype, "reason", void 0);
 class BusinessQueryDto {
     constructor() {
         this.page = 1;

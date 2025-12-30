@@ -56,10 +56,20 @@ let AuthService = class AuthService {
         this.prisma = prisma;
         this.jwtService = jwtService;
     }
-    async register(email, password, firstName, lastName, role = 'USER') {
+    async register(email, password, firstName, secondName, lastName, phone, role = 'USER') {
         if (!email || !password || !firstName || !lastName) {
             const { BadRequestException } = await Promise.resolve().then(() => __importStar(require('@nestjs/common')));
             throw new BadRequestException('Email, password, first name, and last name are required');
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            const { BadRequestException } = await Promise.resolve().then(() => __importStar(require('@nestjs/common')));
+            throw new BadRequestException('Please provide a valid email address');
+        }
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])(?=.{8,})/;
+        if (!passwordRegex.test(password)) {
+            const { BadRequestException } = await Promise.resolve().then(() => __importStar(require('@nestjs/common')));
+            throw new BadRequestException('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character');
         }
         const existing = await this.prisma.user.findUnique({
             where: { email }
@@ -78,23 +88,27 @@ let AuthService = class AuthService {
                 email,
                 passwordHash: hash,
                 firstName,
-                secondName: lastName,
+                secondName,
+                lastName,
+                phone: phone || null,
                 role,
                 isActive: true
             },
         });
+        const tokens = await this.getTokens(user.id, user.email, user.role);
+        await this.updateRefreshToken(user.id, tokens.refreshToken);
         return {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName || '',
-            secondName: user.secondName,
-            phone: user.phone,
-            role: user.role,
-            isActive: user.isActive,
-            lastLogin: user.lastLogin,
-            refreshToken: user.refreshToken,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
+            ...tokens,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                secondName: user.secondName || '',
+                lastName: user.lastName,
+                phone: user.phone || '',
+                role: user.role,
+                isActive: user.isActive
+            }
         };
     }
     async validateUser(email, password) {
@@ -118,9 +132,10 @@ let AuthService = class AuthService {
         return {
             id: user.id,
             email: user.email,
-            firstName: user.firstName || '',
-            secondName: user.secondName,
-            phone: user.phone,
+            firstName: user.firstName,
+            secondName: user.secondName || '',
+            lastName: user.lastName,
+            phone: user.phone || '',
             role: user.role,
             isActive: user.isActive,
             lastLogin: user.lastLogin,
@@ -143,11 +158,56 @@ let AuthService = class AuthService {
         const { passwordHash, refreshToken, ...rest } = user;
         return rest;
     }
+    async getTokens(userId, email, role) {
+        const [accessToken, refreshToken] = await Promise.all([
+            this.jwtService.signAsync({
+                sub: userId,
+                email,
+                role,
+            }, {
+                secret: process.env.JWT_ACCESS_SECRET || 'jwt-access-secret',
+                expiresIn: '15m',
+            }),
+            this.jwtService.signAsync({
+                sub: userId,
+                email,
+                role,
+            }, {
+                secret: process.env.JWT_REFRESH_SECRET || 'jwt-refresh-secret',
+                expiresIn: '7d',
+            }),
+        ]);
+        return {
+            accessToken,
+            refreshToken,
+        };
+    }
+    async updateRefreshToken(userId, refreshToken) {
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { refreshToken: hashedRefreshToken },
+        });
+    }
     async login(user) {
-        const payload = { sub: user.id, email: user.email };
-        const accessToken = this.jwtService.sign(payload);
-        const fullUser = await this.getPublicUserById(user.id);
-        return { accessToken, user: fullUser };
+        const tokens = await this.getTokens(user.id, user.email, user.role);
+        await this.updateRefreshToken(user.id, tokens.refreshToken);
+        const userData = await this.getPublicUserById(user.id);
+        return {
+            ...tokens,
+            user: {
+                id: userData.id,
+                email: userData.email,
+                firstName: userData.firstName || '',
+                lastName: userData.secondName || '',
+                phone: userData.phone || '',
+                role: userData.role,
+                isActive: userData.isActive,
+                lastLogin: userData.lastLogin,
+                createdAt: userData.createdAt,
+                updatedAt: userData.updatedAt
+            }
+        };
     }
 };
 exports.AuthService = AuthService;
