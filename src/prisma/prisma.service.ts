@@ -1,4 +1,4 @@
-import { INestApplication, Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger, INestApplication } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -46,7 +46,8 @@ export class PrismaService extends PrismaClient<Prisma.PrismaClientOptions, 'que
   }
 
   async enableShutdownHooks(app: INestApplication) {
-    this.$on('beforeExit', async () => {
+    // Handle application shutdown with process events
+    process.on('beforeExit', async () => {
       try {
         await app.close();
         this.logger.log('Application is shutting down...');
@@ -54,6 +55,22 @@ export class PrismaService extends PrismaClient<Prisma.PrismaClientOptions, 'que
         this.logger.error('Error during application shutdown', error);
         process.exit(1);
       }
+    });
+
+    // Handle other termination signals
+    const signals = ['SIGTERM', 'SIGINT', 'SIGQUIT'];
+    signals.forEach(signal => {
+      process.on(signal, async () => {
+        this.logger.log(`Received ${signal}. Gracefully shutting down...`);
+        try {
+          await app.close();
+          this.logger.log('Successfully shut down application');
+          process.exit(0);
+        } catch (error) {
+          this.logger.error('Error during shutdown', error);
+          process.exit(1);
+        }
+      });
     });
   }
 }
