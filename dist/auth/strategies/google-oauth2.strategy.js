@@ -10,39 +10,34 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleOAuth2Strategy = void 0;
+const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const passport_google_oauth20_1 = require("passport-google-oauth20");
-const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 let GoogleOAuth2Strategy = class GoogleOAuth2Strategy extends (0, passport_1.PassportStrategy)(passport_google_oauth20_1.Strategy, 'google') {
     constructor(configService) {
-        const clientID = configService.get('GOOGLE_CLIENT_ID');
-        const clientSecret = configService.get('GOOGLE_CLIENT_SECRET');
-        const apiUrl = configService.get('API_URL');
-        if (!clientID || !clientSecret || !apiUrl) {
-            throw new Error('Missing required OAuth2 configuration. Please check your environment variables: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and API_URL');
-        }
         super({
-            clientID,
-            clientSecret,
-            callbackURL: `${apiUrl}/auth/google/callback`,
+            clientID: configService.get('GOOGLE_CLIENT_ID'),
+            clientSecret: configService.get('GOOGLE_CLIENT_SECRET'),
+            callbackURL: configService.get('GOOGLE_CALLBACK_URL'),
             scope: ['email', 'profile'],
-            passReqToCallback: true
         });
         this.configService = configService;
     }
-    async validate(request, accessToken, refreshToken, profile, done) {
+    async validate(accessToken, refreshToken, profile) {
         var _a;
-        const { name, emails, photos } = profile;
+        const { id, name, emails, photos } = profile;
         const user = {
+            provider: 'google',
+            providerId: id,
             email: emails[0].value,
             firstName: name.givenName,
             lastName: name.familyName,
-            picture: ((_a = photos === null || photos === void 0 ? void 0 : photos[0]) === null || _a === void 0 ? void 0 : _a.value) || '',
+            picture: (_a = photos === null || photos === void 0 ? void 0 : photos[0]) === null || _a === void 0 ? void 0 : _a.value,
             accessToken,
             refreshToken,
         };
-        done(null, user);
+        return user;
     }
 };
 exports.GoogleOAuth2Strategy = GoogleOAuth2Strategy;

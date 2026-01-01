@@ -117,6 +117,10 @@ export class AuthService {
       return null;
     }
     
+    if (!user.passwordHash) {
+      return null;
+    }
+    
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     
     if (!isPasswordValid) {

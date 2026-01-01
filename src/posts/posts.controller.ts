@@ -56,8 +56,7 @@ export class PostsController {
   create(
     @Body() createPostDto: CreatePostDto, 
     @UploadedFile() file: Express.Multer.File, 
-    @Req() req, 
-    @CurrentUser() user
+    @CurrentUser() user: any
   ) {
     if (file) {
       createPostDto.media = [`/public/uploads/${file.filename}`];
@@ -89,7 +88,7 @@ export class PostsController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Post deleted successfully' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Not the post owner' })
-  async remove(@Param('id') id: string, @CurrentUser() user) {
+  async remove(@Param('id') id: string, @CurrentUser() user: any) {
     // First check if the post exists and belongs to the user
     const post = await this.postsService.findOne(id);
     if (!post) {
@@ -111,7 +110,7 @@ export class PostsController {
     type: LikeResponse
   })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  like(@Param('id') id: string, @CurrentUser() user) {
+  like(@Param('id') id: string, @CurrentUser() user: any) {
     return this.postsService.addLike(id, user.id);
   }
 
@@ -125,7 +124,7 @@ export class PostsController {
     type: LikeResponse
   })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  unlike(@Param('id') id: string, @CurrentUser() user) {
+  unlike(@Param('id') id: string, @CurrentUser() user: any) {
     return this.postsService.removeLike(id, user.id);
   }
 
@@ -139,7 +138,7 @@ export class PostsController {
   comment(
     @Param('id') id: string, 
     @Body() body: { content: string }, 
-    @CurrentUser() user
+    @CurrentUser() user: any
   ) {
     return this.postsService.addComment(id, user.id, body.content);
   }

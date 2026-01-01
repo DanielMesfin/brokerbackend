@@ -52,7 +52,7 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
         }
     }
     async enableShutdownHooks(app) {
-        this.$on('beforeExit', async () => {
+        process.on('beforeExit', async () => {
             try {
                 await app.close();
                 this.logger.log('Application is shutting down...');
@@ -61,6 +61,21 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
                 this.logger.error('Error during application shutdown', error);
                 process.exit(1);
             }
+        });
+        const signals = ['SIGTERM', 'SIGINT', 'SIGQUIT'];
+        signals.forEach(signal => {
+            process.on(signal, async () => {
+                this.logger.log(`Received ${signal}. Gracefully shutting down...`);
+                try {
+                    await app.close();
+                    this.logger.log('Successfully shut down application');
+                    process.exit(0);
+                }
+                catch (error) {
+                    this.logger.error('Error during shutdown', error);
+                    process.exit(1);
+                }
+            });
         });
     }
 };

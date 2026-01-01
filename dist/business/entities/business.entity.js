@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Business = exports.BusinessStatus = exports.BusinessType = void 0;
 const typeorm_1 = require("typeorm");
+const promotion_entity_1 = require("./promotion.entity");
 const business_document_entity_1 = require("./business-document.entity");
 const business_verification_entity_1 = require("./business-verification.entity");
 const business_compliance_entity_1 = require("./business-compliance.entity");
@@ -122,6 +123,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => business_document_entity_1.BusinessDocument, (document) => document.business, { cascade: true }),
     __metadata("design:type", Array)
 ], Business.prototype, "documents", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => promotion_entity_1.Promotion, (promotion) => promotion.business, { cascade: true }),
+    __metadata("design:type", Array)
+], Business.prototype, "promotions", void 0);
 __decorate([
     (0, typeorm_1.OneToOne)(() => business_verification_entity_1.BusinessVerification, { cascade: true }),
     (0, typeorm_1.JoinColumn)(),

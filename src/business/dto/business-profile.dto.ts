@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsArray, IsEnum, IsUrl, IsUUID } from 'class-validator';
-import { BusinessCategory, CollaborationType } from '@prisma/client';
+import { CollaborationType } from '@prisma/client';
 
 export class CreateBusinessProfileDto {
   @ApiProperty({ example: 'Acme Corp', description: 'The name of the business' })

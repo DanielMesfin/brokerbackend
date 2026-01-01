@@ -208,7 +208,7 @@ model User {
   authProvider             AuthProvider         @default(EMAIL)
   premiumUntil             DateTime?
   points                   Int                  @default(0)
-  referralCode             String
+  referralCode             String?
   lastLogin                DateTime?
   refreshToken             String?
   createdAt                DateTime             @default(now())

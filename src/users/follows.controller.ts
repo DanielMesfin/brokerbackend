@@ -9,13 +9,13 @@ export class FollowsController {
 
   @Post(':id/follow')
   @UseGuards(JwtPrismaGuard)
-  follow(@Param('id') id: string, @CurrentUser() user) {
+  follow(@Param('id') id: string, @CurrentUser() user:any) {
     return this.follows.follow(user.id, id);
   }
 
   @Delete(':id/follow')
   @UseGuards(JwtPrismaGuard)
-  unfollow(@Param('id') id: string, @CurrentUser() user) {
+  unfollow(@Param('id') id: string, @CurrentUser() user:any) {
     return this.follows.unfollow(user.id, id);
   }
 

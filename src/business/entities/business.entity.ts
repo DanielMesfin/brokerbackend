@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Promotion } from './promotion.entity';
 import { BusinessDocument } from './business-document.entity';
 import { BusinessVerification } from './business-verification.entity';
 import { BusinessCompliance } from './business-compliance.entity';
@@ -93,6 +94,9 @@ export class Business {
   // Relations
   @OneToMany(() => BusinessDocument, (document) => document.business, { cascade: true })
   documents: BusinessDocument[];
+
+  @OneToMany(() => Promotion, (promotion) => promotion.business, { cascade: true })
+  promotions: Promotion[];
 
   @OneToOne(() => BusinessVerification, { cascade: true })
   @JoinColumn()
